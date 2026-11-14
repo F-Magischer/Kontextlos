@@ -1,7 +1,6 @@
 extends Control
-## KONTEXTLOS host screen. Owns all game state; phones are thin clients via the relay server.
-
-const C := preload("res://content.gd")
+## KONTEXTLOS big screen. The server runs the game; this only draws the latest "view" it sends,
+## so a hidden or reloaded tab never stalls a round.
 
 const PAPER := Color("#EFE7D6")
 const INK := Color("#1B1A17")
@@ -11,45 +10,27 @@ const YELLOW := Color("#FFD23F")
 const WHITE := Color("#FFFDF7")
 const W := 1920.0
 const H := 1080.0
-
-const ROUNDS := 3
 const MIN_PLAYERS := 3
-const T_ANSWER := 60.0
-const T_TWIST := 75.0
-const T_VOTE := 30.0
-const GRACE := 1.5     # phones auto-submit when their timer hits 0; give those messages time to arrive
-const T_HEAD := 3.5    # reveal: only the twist (headline/title) is visible
-const T_BODY := 5.5    # reveal: the original answer drops in
-const T_ORIGIN := 4.0  # reveal: the innocent question it really answered
-const PTS_TWIST := 100
-const PTS_PITY := 40
-
-enum P { CONNECTING, LOBBY, ANSWER, TWIST, REVEAL, VOTE, RESULTS, END }
 
 var ws := WebSocketPeer.new()
 var hello_sent := false
 var retry_at := 0.0
 var server_url := "ws://localhost:8080"
-var speed := 1.0  # --fast for automated tests
 
 var room_code := ""
-var join_url := ""
-var players := {}       # id -> {name, color, score, online, state}
-var order: Array = []   # join order; first online player is VIP
-var phase := P.CONNECTING
-var round_no := 0
-var posts: Array = []   # {answerer, twister, prompt, fmt, answer, twist}
-var votes := {}         # voter id -> post index
+var join_link := ""
+var v := {}               # latest view from the server
+var players := {}         # id -> player dict (from v.players)
+var order: Array = []     # ids in join order
 var deadline := 0.0
 var phase_len := 1.0
-var phase_grace := 0.0
-var phone_mode := false  # false: big screen shows everything; true: every phone also shows reveal + results
+var seen := {}            # nodes already animated on the current screen
 var qr_tex: Texture2D
 var copied_until := 0.0
-var _late: Array = []    # answer parts of the post being built; hidden until the reveal drops them in
-var gen := 0            # bumps on every phase change; stale awaits bail out
-var used_prompts: Array = []
-var seen := {}          # stickers already animated on the current screen
+var _late: Array = []     # answer parts of the post being built; hidden until the reveal drops them in
+var cur_key := ""         # reveal: which post is on screen
+var cur_late: Array = []
+var origin_shown := false
 
 var f_black: FontVariation
 var f_bold: FontVariation
@@ -65,11 +46,10 @@ var timer_bar: ColorRect
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--server="): server_url = a.trim_prefix("--server=")
-		if a == "--fast": speed = 12.0
-		if a == "--phone-mode": phone_mode = true
 		if a.begins_with("--shots="): _shoot(a.trim_prefix("--shots="))
 	if OS.has_feature("web"):
 		server_url = str(JavaScriptBridge.eval("(location.protocol==='https:'?'wss://':'ws://')+location.host"))
+		room_code = str(JavaScriptBridge.eval("sessionStorage.getItem('kl_room')||''"))  # survive a reload
 	f_black = _font(800, 80)
 	f_bold = _font(700, 90)
 	f_mid = _font(500, 100)
@@ -88,9 +68,13 @@ func _process(_dt: float) -> void:
 		if not hello_sent:
 			hello_sent = true
 			_send({"t": "host", "code": room_code})
+		var latest = null
 		while ws.get_available_packet_count() > 0:
 			var m = JSON.parse_string(ws.get_packet().get_string_from_utf8())
-			if m is Dictionary: _on_server(m)
+			if not m is Dictionary: continue
+			if m.get("t") == "view": latest = m  # after a pause only the newest view matters
+			else: _on_server(m)
+		if latest: _on_server(latest)
 	elif st == WebSocketPeer.STATE_CLOSED and _now() > retry_at:
 		hello_sent = false
 		retry_at = _now() + 2.0
@@ -98,12 +82,8 @@ func _process(_dt: float) -> void:
 		ws.connect_to_url(server_url)
 
 	if deadline > 0.0:
-		var left := deadline - _now()
 		timer_bar.visible = true
-		timer_bar.scale.x = clampf((left - phase_grace) / phase_len, 0.0, 1.0)
-		if left <= 0.0:
-			deadline = 0.0
-			_on_timeout()
+		timer_bar.scale.x = clampf((deadline - _now()) / phase_len, 0.0, 1.0)
 	else:
 		timer_bar.visible = false
 
@@ -113,263 +93,46 @@ func _send(obj: Dictionary) -> void:
 		ws.send_text(JSON.stringify(obj))
 
 
-func _to(id: String, d: Dictionary) -> void:
-	d["color"] = players[id].color
-	players[id].state = d
-	_send({"t": "to", "id": id, "d": d})
-
-
 func _on_server(m: Dictionary) -> void:
 	match m.get("t"):
 		"room":
 			room_code = m.code
-			join_url = m.url
+			join_link = "%s/?code=%s" % [m.url, room_code]
+			if OS.has_feature("web"): JavaScriptBridge.eval("sessionStorage.setItem('kl_room','%s')" % room_code)
 			print("ROOM ", room_code)
 			hud_code.text = room_code
-			hud_url.text = join_url.replace("http://", "").replace("https://", "")
-			if phase == P.CONNECTING: _set_phase(P.LOBBY)
+			hud_url.text = str(m.url).replace("http://", "").replace("https://", "")
 			_load_qr()
+		"view":
+			var nv: Dictionary = m.v
+			if nv.phase != v.get("phase") or nv.round != v.get("round"):
+				seen.clear()
+				cur_key = ""
+			v = nv
+			players.clear()
+			order.clear()
+			for p in v.players:
+				players[p.id] = p
+				order.append(p.id)
+			deadline = _now() + v.left if v.left > 0 else 0.0
+			phase_len = maxf(v.len, 0.01)
 			_render()
-		"join":
-			var id: String = m.id
-			players[id] = {"name": str(m.name), "color": C.PLAYER_COLORS[order.size() % C.PLAYER_COLORS.size()], "score": 0, "online": true, "state": {}}
-			order.append(id)
-			if phase == P.LOBBY: _push_lobby()
-			else: _to(id, {"s": "wait", "title": "Gleich bist du dabei.", "text": "Ab der nächsten Runde spielst du mit."})
-			_render()
-		"rejoin":
-			if players.has(m.id):
-				players[m.id].online = true
-				if phase == P.LOBBY: _push_lobby()
-				else: _to(m.id, players[m.id].state)
-				_render()
-		"leave":
-			if players.has(m.id):
-				players[m.id].online = false
-				if phase == P.LOBBY: _push_lobby()
-				_render()
-				_check_done()
-		"msg":
-			if players.has(m.id) and m.d is Dictionary: _on_player(m.id, m.d)
-
-
-func _on_player(id: String, d: Dictionary) -> void:
-	var a = d.get("a")
-	var key := str(d.get("key", ""))
-	if a == "start" and phase == P.LOBBY and id == _vip() and _online().size() >= MIN_PLAYERS:
-		_start_game()
-	elif a == "restart" and phase == P.END and id == _vip():
-		_to_lobby()
-	elif a == "submit" and phase == P.ANSWER and key == "a%d" % round_no:
-		for p in posts:
-			if p.answerer == id and p.answer == "": p.answer = _clean(d.get("text"), 80)
-		_render(); _check_done()
-	elif a == "submit" and phase == P.TWIST and key == "t%d" % round_no:
-		for p in posts:
-			if p.twister == id and p.twist == "": p.twist = _clean(d.get("text"), 70)
-		_render(); _check_done()
-	elif a == "vote" and phase == P.VOTE and key == "v%d" % round_no and _in_round(id) and not votes.has(id):
-		var i := int(d.get("i", -1))
-		if i >= 0 and i < posts.size() and posts[i].twister != id:
-			votes[id] = i
-			_render(); _check_done()
-
-
-# ---------------------------------------------------------------- game flow
-
-func _set_phase(p: P, seconds := 0.0, grace := 0.0) -> void:
-	phase = p
-	gen += 1
-	seen.clear()
-	phase_len = maxf(seconds / speed, 0.01)
-	phase_grace = grace / speed
-	deadline = _now() + phase_len + phase_grace if seconds > 0.0 else 0.0
-
-
-func _to_lobby() -> void:
-	for id in players.keys():
-		if not players[id].online:
-			players.erase(id)
-			order.erase(id)
-	_set_phase(P.LOBBY)
-	_push_lobby()
-	_render()
-
-
-func _push_lobby() -> void:
-	for id in order:
-		_to(id, {"s": "lobby", "vip": id == _vip(), "count": _online().size(), "phoneMode": phone_mode})
-
-
-func _start_game() -> void:
-	for id in players: players[id].score = 0
-	round_no = 0
-	used_prompts.clear()
-	_next_round()
-
-
-func _next_round() -> void:
-	round_no += 1
-	var ids := _online()
-	ids.shuffle()
-	var fmts: Array = C.FORMATS.duplicate()
-	fmts.shuffle()
-	posts.clear()
-	for i in ids.size():
-		posts.append({"answerer": ids[i], "twister": ids[(i + 1) % ids.size()], "prompt": _pick_prompt(),
-			"fmt": fmts[i % fmts.size()], "answer": "", "twist": ""})
-	_set_phase(P.ANSWER, T_ANSWER, GRACE)
-	for p in posts:
-		_to(p.answerer, {"s": "write", "key": "a%d" % round_no, "tag": "Runde %d · Ehrlich sein" % round_no,
-			"title": p.prompt, "label": "Deine Antwort", "placeholder": "Ehrlich. Kurz. Harmlos.", "max": 80, "seconds": T_ANSWER / speed})
-	_wait_others()
-	_render()
-
-
-func _end_answer() -> void:
-	for p in posts:
-		if p.answer == "": p.answer = C.NO_ANSWER.pick_random()
-	_set_phase(P.TWIST, T_TWIST, GRACE)
-	for p in posts:
-		# no prompt in here on purpose: the twister only sees the answer in its new context
-		var post := _payload(p)
-		post.erase("prompt")
-		post.erase("twist")
-		_to(p.twister, {"s": "write", "key": "t%d" % round_no, "tag": "Runde %d · Verdrehen · %s" % [round_no, p.fmt.name],
-			"post": post, "placeholder": "%s – %s" % [p.fmt.label, p.fmt.hint], "max": 70, "seconds": T_TWIST / speed})
-	_wait_others()
-	_render()
-
-
-func _end_twist() -> void:
-	for p in posts:
-		if p.twist == "": p.twist = p.fmt.fallback
-	_set_phase(P.REVEAL)
-	var g := gen
-	for id in order:
-		_to(id, {"s": "wait", "title": "Runde %d" % round_no, "text": "Was das Internet daraus gemacht hat …" if phone_mode else "Augen nach vorn. Jetzt wird's peinlich."})
-	_show_round_title()
-	await _wait(2.4)
-	for i in posts.size():
-		if g != gen: return
-		await _reveal_post(posts[i], i, g)
-	if g == gen: _start_vote()
-
-
-## One post in three beats: twist alone → answer drops in → the innocent question behind it.
-func _reveal_post(p: Dictionary, i: int, g: int) -> void:
-	_clear()
-	_late.clear()
-	var card := _post_card(p, 1.0)
-	var late := _late.duplicate()
-	for n in late: n.modulate.a = 0.0
-	_put(_mono("Post %d von %d · %s" % [i + 1, posts.size(), p.fmt.name], 24), Vector2(W / 2, 170), 0, 0, false)
-	_put(card, Vector2(W / 2, 560), -1.2)
-	_phones_reveal(p, i, 1)
-	await _wait(T_HEAD)
-	if g != gen: return
-	for n in late: create_tween().tween_property(n, "modulate:a", 1.0, 0.18)
-	_phones_reveal(p, i, 2)
-	await _wait(T_BODY)
-	if g != gen: return
-	var origin := _box(YELLOW, 22, 8)
-	origin.add_child(_col([_mono("Eigentlich gefragt war %s:" % _name(p.answerer), 20), _label(p.prompt, 44, INK, f_black, 760)], 4))
-	_put(origin, Vector2(W / 2 + 330, 930), 3.0)
-	_put(_mono("Verdreht von %s" % _name(p.twister), 24), Vector2(W / 2 - 520, 930), -2.0, 0.2)
-	_phones_reveal(p, i, 3)
-	await _wait(T_ORIGIN)
-
-
-func _payload(p: Dictionary) -> Dictionary:
-	return {"f": p.fmt.id, "twist": p.twist, "answer": p.answer, "who": _name(p.answerer),
-		"color": players[p.answerer].color, "prompt": p.prompt, "twister": _name(p.twister)}
-
-
-func _phones_reveal(p: Dictionary, i: int, stage: int) -> void:
-	if not phone_mode: return
-	for id in order:
-		_to(id, {"s": "reveal", "stage": stage, "post": _payload(p), "tag": "Post %d von %d · %s" % [i + 1, posts.size(), p.fmt.name]})
-
-
-func _start_vote() -> void:
-	votes.clear()
-	_set_phase(P.VOTE, T_VOTE)
-	for p in posts:
-		var id: String = p.answerer
-		var opts := []
-		for i in posts.size():
-			if posts[i].twister != id:
-				opts.append({"i": i, "tag": posts[i].fmt.name, "text": "%s — „%s“" % [posts[i].twist, posts[i].answer], "post": _payload(posts[i])})
-		_to(id, {"s": "vote", "key": "v%d" % round_no, "title": "Welcher Post ist am schlimmsten?", "options": opts,
-			"full": phone_mode, "seconds": T_VOTE / speed})
-	_wait_others()
-	_render()
-
-
-func _end_vote() -> void:
-	_set_phase(P.RESULTS)
-	var g := gen
-	var counts := []
-	counts.resize(posts.size())
-	counts.fill(0)
-	for v in votes.values(): counts[v] += 1
-	var gains := {}
-	for id in players: gains[id] = 0
-	for i in posts.size():
-		gains[posts[i].twister] += counts[i] * PTS_TWIST * round_no
-		gains[posts[i].answerer] += counts[i] * PTS_PITY * round_no
-	for id in gains: players[id].score += gains[id]
-	var rows := []
-	for id in _ranked():
-		rows.append({"name": _name(id), "color": players[id].color, "score": players[id].score, "gain": gains[id]})
-	for id in order:
-		if phone_mode:
-			_to(id, {"s": "scores", "title": "Runde %d vorbei." % round_no, "rows": rows, "gain": gains[id]})
-		else:
-			_to(id, {"s": "wait", "title": "Auszählung.", "text": "+%d Punkte diese Runde." % gains[id]})
-	_draw_board(counts)
-	await _wait(6.0)
-	if g != gen: return
-	_show_scores(gains)
-	await _wait(7.0)
-	if g != gen: return
-	if round_no < ROUNDS: _next_round()
-	else: _end_game()
-
-
-func _end_game() -> void:
-	_set_phase(P.END)
-	var ranked := _ranked()
-	for i in ranked.size():
-		var id: String = ranked[i]
-		_to(id, {"s": "end", "place": i + 1, "text": "%d Punkte" % players[id].score, "vip": id == _vip()})
-	_render()
-
-
-func _on_timeout() -> void:
-	match phase:
-		P.ANSWER: _end_answer()
-		P.TWIST: _end_twist()
-		P.VOTE: _end_vote()
-
-
-func _check_done() -> void:
-	match phase:
-		P.ANSWER:
-			if posts.all(func(p): return p.answer != "" or not players[p.answerer].online): _end_answer()
-		P.TWIST:
-			if posts.all(func(p): return p.twist != "" or not players[p.twister].online): _end_twist()
-		P.VOTE:
-			if posts.all(func(p): return votes.has(p.answerer) or not players[p.answerer].online): _end_vote()
-
-
-func _wait_others() -> void:
-	for id in order:
-		if not _in_round(id):
-			_to(id, {"s": "wait", "title": "Gleich bist du dabei.", "text": "Ab der nächsten Runde spielst du mit."})
 
 
 # ---------------------------------------------------------------- helpers
+
+func _now() -> float: return Time.get_ticks_msec() / 1000.0
+func _online() -> Array: return order.filter(func(id): return players[id].online)
+func _vip() -> String:
+	for id in order:
+		if players[id].vip: return id
+	return ""
+func _name(id: String) -> String: return players[id].name if players.has(id) else ""
+func _ranked() -> Array:
+	var r := order.duplicate()
+	r.sort_custom(func(a, b): return players[a].score > players[b].score)
+	return r
+
 
 ## Dev aid: saves a screenshot every 2 s into `dir` (used to review the art without clicking through).
 func _shoot(dir: String) -> void:
@@ -378,32 +141,6 @@ func _shoot(dir: String) -> void:
 		await get_tree().create_timer(2.0).timeout
 		get_viewport().get_texture().get_image().save_png("%s/%03d.png" % [dir, n])
 		n += 1
-
-func _now() -> float: return Time.get_ticks_msec() / 1000.0
-func _wait(sec: float) -> Signal: return get_tree().create_timer(sec / speed).timeout
-func _name(id: String) -> String: return players[id].name
-func _online() -> Array: return order.filter(func(id): return players[id].online)
-func _vip() -> String:
-	var o := _online()
-	return o[0] if o.size() > 0 else ""
-func _in_round(id: String) -> bool: return posts.any(func(p): return p.answerer == id)
-func _ranked() -> Array:
-	var r: Array = players.keys()
-	r.sort_custom(func(a, b): return players[a].score > players[b].score)
-	return r
-func _clean(v, max_len: int) -> String:
-	var s := str(v if v != null else "").replace("\n", " ").strip_edges().substr(0, max_len)
-	return s
-
-
-func _pick_prompt() -> String:
-	var pool: Array = C.PROMPTS.filter(func(p): return not used_prompts.has(p))
-	if pool.is_empty():
-		used_prompts.clear()
-		pool = C.PROMPTS.duplicate()
-	var p: String = pool.pick_random()
-	used_prompts.append(p)
-	return p
 
 
 func _font(weight: int, width: int) -> FontVariation:
@@ -495,7 +232,7 @@ func _slap(node: Control, delay := 0.0) -> void:
 	node.scale = Vector2(1.35, 1.35)
 	node.modulate.a = 0.0
 	var t := create_tween().set_parallel()
-	t.tween_property(node, "scale", Vector2.ONE, 0.32 / sqrt(speed)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(delay)
+	t.tween_property(node, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(delay)
 	t.tween_property(node, "modulate:a", 1.0, 0.1).set_delay(delay)
 
 
@@ -566,17 +303,23 @@ func _build_frame() -> void:
 # ---------------------------------------------------------------- screens
 
 func _render() -> void:
-	hud_round.text = ("RUNDE %d/%d · PUNKTE ×%d" % [round_no, ROUNDS, round_no]) if phase >= P.ANSWER and phase <= P.RESULTS else ""
-	match phase:
-		P.CONNECTING: _draw_connecting()
-		P.LOBBY: _draw_lobby()
-		P.ANSWER: _draw_writing("Sei ehrlich.", "Beantwortet eure Frage auf dem Handy. Ganz harmlos. Noch.", "answer")
-		P.TWIST: _draw_writing("Jetzt verdrehen.", "Ihr habt eine fremde Antwort bekommen. Gebt ihr einen ganz neuen Zusammenhang.", "twist")
-		P.VOTE: _draw_board([])
-		P.END: _draw_end()
+	var ph: String = v.get("phase", "")
+	hud_round.text = ("RUNDE %d/%d · PUNKTE ×%d" % [v.round, v.rounds, v.round]) if ph in ["answer", "twist", "reveal", "vote", "results", "scores"] else ""
+	match ph:
+		"lobby": _draw_lobby()
+		"answer": _draw_writing("Sei ehrlich.", "Beantwortet eure Frage auf dem Handy. Ganz harmlos. Noch.", "aDone", "who", "aOnline")
+		"twist": _draw_writing("Jetzt verdrehen.", "Ihr habt eine fremde Antwort bekommen. Gebt ihr einen ganz neuen Zusammenhang.", "tDone", "twister", "tOnline")
+		"reveal": _draw_reveal()
+		"vote": _draw_board([])
+		"results": _draw_board(v.counts)
+		"scores": _show_scores(v.gains)
+		"end": _draw_end()
+		_: _draw_connecting()
 
 
 func _draw_connecting() -> void:
+	if seen.has("conn"): return
+	seen["conn"] = true
 	_clear()
 	_put(_label("Verbinde mit Server …", 64, INK, f_black), Vector2(W / 2, H / 2), -1.5)
 	_put(_mono(server_url, 22), Vector2(W / 2, H / 2 + 80), 0, 0, false)
@@ -603,28 +346,28 @@ func _draw_lobby() -> void:
 	qr.add_child(tr)
 	_put(qr, Vector2(250, 820), -1.5, 0, false)
 
+	var phone: bool = v.phoneMode
 	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy)
-	var mode := _button("Modus: Alle am Handy" if phone_mode else "Modus: Großer Bildschirm", _on_mode, YELLOW)
+	var mode := _button("Modus: Alle am Handy" if phone else "Modus: Großer Bildschirm", _on_mode, YELLOW)
 	var side := _col([
 		_mono("Scannen oder öffnen", 20),
-		_label(_join_link().replace("http://", "").replace("https://", ""), 30, INK, f_mono),
+		_label(join_link.replace("http://", "").replace("https://", ""), 30, INK, f_mono),
 		copy,
 		_rect(Color.TRANSPARENT, Vector2(1, 8)),
 		mode,
-		_mono("Handy-Modus: Auflösung auch auf jedem Handy" if phone_mode else "Auflösung nur hier auf dem Bildschirm", 16),
+		_mono("Auflösung auch auf jedem Handy" if phone else "Auflösung nur hier auf dem Bildschirm", 16),
 	], 10)
 	_put(side, Vector2(700, 830), 0, 0, false)
 
 	for i in 8:
 		var center := Vector2(1240 + (i % 2) * 400, 300 + (i / 2) * 170)
 		if i < order.size():
-			var id: String = order[i]
-			var p: Dictionary = players[id]
+			var p: Dictionary = players[order[i]]
 			var b := _box(Color(p.color) if p.online else WHITE, 18, 8)
 			b.custom_minimum_size = Vector2(340, 0)
-			var tag := "BOSS" if id == _vip() else ("OFFLINE" if not p.online else "BEREIT")
+			var tag := "BOSS" if p.vip else ("OFFLINE" if not p.online else "BEREIT")
 			b.add_child(_col([_mono(tag, 18, WHITE if p.online else INK), _label(p.name, 50, WHITE if p.online else INK, f_black)], 0))
-			var k := "p" + id + str(p.online)
+			var k := "p%s%s" % [p.id, p.online]
 			_put(b, center, _tilt(i), 0, not seen.has(k))
 			seen[k] = true
 		else:
@@ -638,33 +381,70 @@ func _draw_lobby() -> void:
 	_put(_mono(hint, 24), Vector2(1440, 990), 0, 0, false)
 
 
-func _draw_writing(title: String, sub: String, field: String) -> void:
+func _draw_writing(title: String, sub: String, done_key: String, name_key: String, online_key: String) -> void:
 	_clear()
 	_put(_label(title, 140, INK, f_black), Vector2(W / 2, 300), -2.0, 0, not seen.has("t"))
 	_put(_label(sub, 38, INK, f_mid, 1100, HORIZONTAL_ALIGNMENT_CENTER), Vector2(W / 2, 440), 0, 0, false)
 	seen["t"] = true
-	var n := posts.size()
+	var n: int = v.posts.size()
 	for i in n:
-		var p: Dictionary = posts[i]
-		var id: String = p.answerer if field == "answer" else p.twister
-		var done: bool = p[field] != ""
-		var b := _box(Color(players[id].color) if done else WHITE, 16, 8 if done else 0, 3)
+		var p: Dictionary = v.posts[i]
+		var done: bool = p[done_key]
+		var col := Color(p.color) if done_key == "aDone" else Color(_color_of(p.twister))
+		var b := _box(col if done else WHITE, 16, 8 if done else 0, 3)
 		b.custom_minimum_size = Vector2(300, 0)
-		var state := "FERTIG" if done else ("SCHREIBT …" if players[id].online else "OFFLINE")
-		b.add_child(_col([_mono(state, 18, WHITE if done else INK), _label(_name(id), 44, WHITE if done else INK, f_black)], 0))
+		var state := "FERTIG" if done else ("SCHREIBT …" if p[online_key] else "OFFLINE")
+		b.add_child(_col([_mono(state, 18, WHITE if done else INK), _label(p[name_key], 44, WHITE if done else INK, f_black)], 0))
 		var cols := mini(n, 4)
 		var x := W / 2 + ((i % 4) - (cols - 1) / 2.0) * 360
-		var k := id + str(done)
+		var k := "%s%s" % [p[name_key], done]
 		_put(b, Vector2(x, 650 + (i / 4) * 160), _tilt(i) if done else 0.0, 0, not seen.has(k))
 		seen[k] = true
 
 
-func _show_round_title() -> void:
-	_clear()
-	_put(_label("Runde %d" % round_no, 180, INK, f_black), Vector2(W / 2, 470), -3.0)
-	var b := _box(PINK, 18, 8)
-	b.add_child(_label("Was das Internet daraus gemacht hat", 48, WHITE, f_black))
-	_put(b, Vector2(W / 2, 640), 2.0, 0.15)
+func _color_of(player_name: String) -> String:
+	for id in order:
+		if players[id].name == player_name: return players[id].color
+	return "#1B1A17"
+
+
+## Reveal beats come from the server: title card, then per post stage 1 (twist) → 2 (answer) → 3 (original question).
+func _draw_reveal() -> void:
+	var b: Dictionary = v.beat if v.beat is Dictionary else {}
+	if b.has("title"):
+		if seen.has("title_card"): return
+		seen["title_card"] = true
+		_clear()
+		_put(_label("Runde %d" % v.round, 180, INK, f_black), Vector2(W / 2, 470), -3.0)
+		var card := _box(PINK, 18, 8)
+		card.add_child(_label("Was das Internet daraus gemacht hat", 48, WHITE, f_black))
+		_put(card, Vector2(W / 2, 640), 2.0, 0.15)
+		return
+	if not b.has("i"): return
+	var i := int(b.i)
+	var stage_n := int(b.stage)
+	var p: Dictionary = v.posts[i]
+	var key := "%d_%d" % [v.round, i]
+	if key != cur_key:
+		cur_key = key
+		origin_shown = false
+		_clear()
+		_late.clear()
+		var card := _post_card(p, 1.0)
+		cur_late = _late.duplicate()
+		if stage_n == 1:
+			for n in cur_late: n.modulate.a = 0.0
+		_put(_mono("Post %d von %d · %s" % [i + 1, v.posts.size(), p.fname], 24), Vector2(W / 2, 170), 0, 0, false)
+		_put(card, Vector2(W / 2, 560), -1.2)
+	elif stage_n >= 2:
+		for n in cur_late:
+			if is_instance_valid(n) and n.modulate.a < 1.0: create_tween().tween_property(n, "modulate:a", 1.0, 0.18)
+	if stage_n >= 3 and not origin_shown:
+		origin_shown = true
+		var origin := _box(YELLOW, 22, 8)
+		origin.add_child(_col([_mono("Eigentlich gefragt war %s:" % p.who, 20), _label(p.prompt, 44, INK, f_black, 760)], 4))
+		_put(origin, Vector2(W / 2 + 330, 930), 3.0)
+		_put(_mono("Verdreht von %s" % p.twister, 24), Vector2(W / 2 - 520, 930), -2.0, 0.2)
 
 
 func _button(text: String, on_press: Callable, bg := INK) -> Button:
@@ -686,21 +466,15 @@ func _button(text: String, on_press: Callable, bg := INK) -> Button:
 
 
 func _on_copy() -> void:
-	DisplayServer.clipboard_set(_join_link())
+	DisplayServer.clipboard_set(join_link)
 	copied_until = _now() + 2.0
 	_render()
 	await get_tree().create_timer(2.0).timeout
-	if phase == P.LOBBY: _render()
+	if v.get("phase") == "lobby": _render()
 
 
 func _on_mode() -> void:
-	phone_mode = not phone_mode
-	_push_lobby()
-	_render()
-
-
-func _join_link() -> String:
-	return "%s/?code=%s" % [join_url, room_code]
+	_send({"t": "mode", "phone": not v.phoneMode})
 
 
 func _load_qr() -> void:
@@ -716,7 +490,7 @@ func _on_qr(result: int, code: int, _h: PackedStringArray, body: PackedByteArray
 	var img := Image.new()
 	if result == HTTPRequest.RESULT_SUCCESS and code == 200 and img.load_png_from_buffer(body) == OK:
 		qr_tex = ImageTexture.create_from_image(img)
-		if phase == P.LOBBY: _render()
+		if v.get("phase") == "lobby": _render()
 
 
 ## Marks a node as part of the original answer (revealed after the twist).
@@ -729,9 +503,9 @@ func _ans(n: Control) -> Control:
 func _post_card(p: Dictionary, s: float) -> Control:
 	var w := 1180.0 * s
 	var fs := func(x: float) -> int: return maxi(int(x * s), 13)  # keep small print readable on the vote board
-	var who: String = _name(p.answerer)
-	var who_col := Color(players[p.answerer].color)
-	match p.fmt.id:
+	var who: String = p.who
+	var who_col := Color(p.color)
+	match p.f:
 		"headline":
 			var b := _box(WHITE, fs.call(36))
 			b.add_child(_col([
@@ -795,47 +569,50 @@ func _post_card(p: Dictionary, s: float) -> Control:
 			return b
 
 
+
 func _draw_board(counts: Array) -> void:
 	_clear()
 	var results := counts.size() > 0
 	_put(_label("Am schlimmsten?" if not results else "Auszählung.", 96, INK, f_black), Vector2(W / 2, 190), -1.5, 0, not seen.has("t"))
+	var n: int = v.posts.size()
 	if not results:
-		var voted := votes.size()
-		_put(_mono("Abstimmen auf dem Handy · %d/%d Stimmen" % [voted, posts.size()], 24), Vector2(W / 2, 270), 0, 0, false)
+		_put(_mono("Abstimmen auf dem Handy · %d/%d Stimmen" % [v.voted, n], 24), Vector2(W / 2, 270), 0, 0, false)
 	seen["t"] = true
-	var n := posts.size()
 	var cols := 2 if n <= 4 else (3 if n <= 6 else 4)
 	var s := 0.6 if cols == 2 else (0.44 if cols == 3 else 0.33)
 	var top := 0
-	for c in counts: top = maxi(top, c)
+	for c in counts: top = maxi(top, int(c))
 	for i in n:
 		var x := W / 2 + ((i % cols) - (cols - 1) / 2.0) * (W / cols - 20)
 		var y := 460.0 + (i / cols) * 400.0 if n > cols else 620.0
-		var card := _post_card(posts[i], s)
+		var card := _post_card(v.posts[i], s)
 		_put(card, Vector2(x, y), _tilt(i), i * 0.04, not seen.has("c%d" % i))
 		seen["c%d" % i] = true
 		if results:
-			var c: int = counts[i]
+			var c := int(counts[i])
 			var stamp := _box(PINK if c == top and c > 0 else WHITE, 12, 6, 3)
 			stamp.add_child(_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], 36, WHITE if c == top and c > 0 else INK, f_black))
 			_put(stamp, Vector2(x + 400 * s, y - 300 * s), 8.0, 0.3 + i * 0.12)
 
 
 func _show_scores(gains: Dictionary) -> void:
+	if seen.has("scores"): return
+	seen["scores"] = true
 	_clear()
 	_put(_label("Punktestand", 110, INK, f_black), Vector2(W / 2, 200), -1.5)
 	var ranked := _ranked()
-	var best := maxi(1, players[ranked[0]].score)
+	var best := maxi(1, int(players[ranked[0]].score))
 	for i in ranked.size():
 		var id: String = ranked[i]
 		var p: Dictionary = players[id]
+		var gain := int(gains.get(id, 0))
 		var bar := _rect(Color(p.color), Vector2(0, 54))
 		var line := _row([_label("%d" % (i + 1), 40, INK, f_mono), _label(p.name, 44, INK, f_black), bar,
-			_label("%d" % p.score, 40, INK, f_mono), _mono(("+%d" % gains.get(id, 0)) if gains.get(id, 0) > 0 else "", 26, PINK)], 22)
+			_label("%d" % p.score, 40, INK, f_mono), _mono(("+%d" % gain) if gain > 0 else "", 26, PINK)], 22)
 		line.get_child(1).custom_minimum_size.x = 300
 		line.custom_minimum_size.x = 1440  # fixed width so growing bars don't re-centre the row
 		_put(line, Vector2(W / 2, 330 + i * 86), 0, i * 0.08)
-		create_tween().tween_property(bar, "custom_minimum_size:x", 760.0 * p.score / best + 8, 0.8 / sqrt(speed)).set_delay(0.2 + i * 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+		create_tween().tween_property(bar, "custom_minimum_size:x", 760.0 * p.score / best + 8, 0.8).set_delay(0.2 + i * 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 func _draw_end() -> void:
@@ -845,11 +622,12 @@ func _draw_end() -> void:
 	var win: Dictionary = players[ranked[0]]
 	var b := _box(Color(win.color), 40, 14)
 	b.add_child(_col([_mono("%d Punkte" % win.score, 26, WHITE), _label("%s gewinnt." % win.name, 130, WHITE, f_black)], 0))
-	_put(b, Vector2(W / 2, 420), -2.5)
+	_put(b, Vector2(W / 2, 420), -2.5, 0, not seen.has("win"))
 	var s := _box(INK, 18, 8)
 	s.add_child(_label("Alle anderen: Kontext verloren.", 48, PAPER, f_black))
-	_put(s, Vector2(W / 2 + 120, 600), 2.0, 0.3)
+	_put(s, Vector2(W / 2 + 120, 600), 2.0, 0.3, not seen.has("win"))
+	seen["win"] = true
 	var rest := []
 	for i in range(1, ranked.size()): rest.append("%d. %s  %d" % [i + 1, players[ranked[i]].name, players[ranked[i]].score])
-	_put(_mono("   ·   ".join(rest), 24), Vector2(W / 2, 760), 0, 0.5)
-	_put(_mono("%s kann eine neue Runde starten." % _name(_vip()) if _vip() != "" else "", 22), Vector2(W / 2, 880), 0, 0, false)
+	_put(_mono("   ·   ".join(rest), 24), Vector2(W / 2, 760), 0, 0, false)
+	_put(_mono(("%s kann eine neue Runde starten." % _name(_vip())) if _vip() != "" else "", 22), Vector2(W / 2, 880), 0, 0, false)

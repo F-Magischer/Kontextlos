@@ -39,6 +39,7 @@ Bewusst vermieden (typische "KI-Game"-Fallen): Lila-Blau-Verläufe, Glassmorphis
 
 ## Technik
 
-- `game/` — Godot 4.7 Projekt = Bildschirm (Host). Die gesamte Spiellogik läuft hier (Host-autoritativ).
-- `server/` — Kleiner Node-Server: Raumcodes, leitet Nachrichten weiter, liefert Handy-Controller (`public/`) und den Godot-Web-Export (`public/host/`) aus.
-- Handy-Controller ist bewusst eine schlanke Web-Seite statt Godot: lädt sofort, echte Handy-Tastatur, Autokorrektur — genau wie bei professionellen Party-Spielen.
+- `server/game.js` — die gesamte Spiellogik inkl. Timer. Läuft auf dem Server, damit nichts hängen bleibt, wenn ein Browser-Tab pausiert.
+- `game/` — Godot 4.7 Projekt = großer Bildschirm. Reine Anzeige: bekommt nach jeder Änderung einen kompletten Spielstand ("view") und zeichnet ihn.
+- `server/public/` — Handy-Seite. Bewusst eine schlanke Web-Seite statt Godot: lädt sofort, echte Handy-Tastatur, Autokorrektur.
+- Zwei Modi: *Großer Bildschirm* (Auflösung vorne) oder *Alle am Handy* (jedes Handy zeigt Auflösung, Abstimmung als Posts, Punkte). Ein Raum, der auf dem Handy erstellt wird, ist automatisch im Handy-Modus.

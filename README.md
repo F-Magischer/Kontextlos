@@ -4,8 +4,8 @@ Party-Spiel für 3–8 Leute im Browser. Sag was Harmloses — die anderen mache
 Design & Art Direction: siehe [DESIGN.md](DESIGN.md).
 
 ```
-game/     Godot 4.7 – der große Bildschirm (Host, gesamte Spiellogik)
-server/   Node – Raumcodes, Nachrichten-Relay, Handy-Controller (public/index.html)
+game/     Godot 4.7 – der große Bildschirm (zeigt nur an, was der Server schickt)
+server/   Node – Spiellogik (game.js), Räume, Texte (content.js), Handy-Seite (public/index.html), QR-Codes
 ```
 
 ## Lokal spielen (alle im selben WLAN)
@@ -18,8 +18,10 @@ server/   Node – Raumcodes, Nachrichten-Relay, Handy-Controller (public/index.
 2. Bildschirm: `http://<adresse>:8080/host/` im Browser öffnen (oder `game/` in Godot öffnen und F5).
 3. Handys scannen den QR-Code oder öffnen den Link vom Bildschirm — los.
 
-**Wichtig:** Der Bildschirm (Host) muss sichtbar bleiben — eigenes Fenster, nicht als Hintergrund-Tab.
-Browser pausieren Spiele in versteckten Tabs; dann läuft auch der Timer nicht weiter.
+Die Spiellogik läuft auf dem Server. Ein versteckter oder neu geladener Bildschirm hält das Spiel nicht an,
+nach dem Neuladen ist derselbe Raum wieder da.
+
+**Ohne großen Bildschirm:** Auf dem Handy „Neuen Raum erstellen“ tippen, den Link teilen — alles läuft dann auf den Handys.
 
 ### Modi (in der Lobby umschaltbar)
 - **Großer Bildschirm:** Auflösung, Abstimmungs-Übersicht und Punkte laufen auf dem Host (Beamer/TV). Handys zeigen nur das Nötigste.
@@ -39,5 +41,7 @@ Für Online-Partys den `server/`-Ordner auf einen Node-Host (z. B. Render, Fly.i
 cd server
 GODOT=pfad/zu/Godot_v4.7.2-stable_win64_console.exe npm test
 ```
-Startet Server + Godot headless + 4 Bots und spielt ein komplettes Spiel durch (inkl. Zeitüberschreitung und doppeltem Namen).
+Ohne `GODOT`: ein Handy-Bot erstellt den Raum, 4 Bots spielen ein komplettes Spiel im Handy-Modus.
+Mit `GODOT`: der Godot-Bildschirm erstellt den Raum (Headless-Test, schlägt bei Skriptfehlern fehl).
+In beiden Fällen inkl. Zeitüberschreitung, Platzhalter-Texten und doppeltem Namen.
 `SHOTS=<ordner>` dazu: Godot läuft sichtbar und speichert alle 2 s einen Screenshot.

@@ -2,7 +2,7 @@
   "name": "kontextlos-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Room relay + phone controller for KONTEXTLOS",
+  "description": "KONTEXTLOS server: game logic, rooms, phone controller",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

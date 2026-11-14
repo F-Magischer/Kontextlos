@@ -94,9 +94,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<"
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let ws, me = null, last = null, sentKey = null, timerRAF = 0, endTimer = 0;
 
-function connect(code, name) {
+function connect(code, name, create = false) {
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
-  ws.onopen = () => ws.send(JSON.stringify({ t: "join", code, name, pid: store.get("kl_pid_" + code) }));
+  ws.onopen = () => ws.send(JSON.stringify(create ? { t: "create", name } : { t: "join", code, name, pid: store.get("kl_pid_" + code) }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === "joined") {
@@ -105,7 +105,6 @@ function connect(code, name) {
       show({ s: "wait", title: "Du bist drin!", text: "Gleich geht's los." });
     }
     else if (m.t === "error") { me = null; joinScreen(m.msg); }
-    else if (m.t === "hostgone") show({ s: "wait", title: "Verbindung weg", text: "Der Spiel-Bildschirm ist offline. Warte kurz …" });
     else if (m.t === "msg") show(m.d);
   };
   ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
@@ -119,7 +118,15 @@ function joinScreen(err) {
     <h1>Rein ins<br>Chaos.</h1>
     <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" value="${esc(q.get("code") || store.get("kl_code") || "")}"></div>
     <div class="field"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
-    <button id="go">Mitspielen</button>`;
+    <button id="go">Mitspielen</button>
+    <p class="mono" style="margin:28px 0 6px">Kein großer Bildschirm da?</p>
+    <button id="new" style="background:#fff;color:var(--ink)">Neuen Raum erstellen</button>`;
+  $("#new").onclick = () => {
+    const name = $("#name").value.trim();
+    if (!name) return joinScreen("Erst deinen Namen eingeben.");
+    $("#new").disabled = true;
+    connect("", name, true);
+  };
   $("#go").onclick = () => {
     const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
     if (code.length !== 4 || !name) return joinScreen("Code (4 Buchstaben) und Name eingeben.");
@@ -178,6 +185,13 @@ function show(d) {
     app.innerHTML = `<p class="mono">Raum ${esc(me?.code)} · ${mode}</p><h1>${d.count} von 8<br>sind da.</h1>
       ${d.vip ? `<div class="card"><p>Du bist <b>Boss</b> dieser Runde. Starte, sobald alle drin sind (mind. 3).</p></div>
       <button id="start" ${d.count < 3 ? "disabled" : ""}>Alle da — los!</button>` : `<div class="card"><p>Gleich geht's los. Der Boss startet das Spiel.</p></div>`}`;
+    if (!d.hasHost || d.phoneMode) {
+      app.insertAdjacentHTML("beforeend", `<div class="card quote" style="margin-top:26px"><span class="mono">Zum Mitspielen: Code ${esc(d.code)}</span><div class="q" style="font-size:16px;word-break:break-all">${esc(d.link)}</div></div><button id="share" style="background:#fff;color:var(--ink)">Link teilen</button>`);
+      $("#share").onclick = async () => {
+        try { if (navigator.share) await navigator.share({ title: "KONTEXTLOS", url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Kopiert!"; } }
+        catch (e) { if (e.name !== "AbortError") $("#share").textContent = "Link oben markieren & kopieren"; } // share/clipboard need https
+      };
+    }
     if (d.vip) $("#start").onclick = () => out({ a: "start" });
 
   } else if (d.s === "write") {

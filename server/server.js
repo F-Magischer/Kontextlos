@@ -1,20 +1,20 @@
-// Room relay: the Godot host owns all game logic; this only routes messages and serves files.
+// KONTEXTLOS server: rooms, game logic (game.js), phone controller and the Godot web build.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { WebSocketServer } = require("ws");
 const QRCode = require("qrcode");
+const G = require("./game");
 
 const PORT = Number(process.env.PORT) || 8080;
 const PUBLIC = path.join(__dirname, "public");
-const MAX_PLAYERS = 8;
 const MAX_MSG = 4096;
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf",
   ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
 
 function lanUrl() {
-  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL;
+  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/$/, "");
   for (const list of Object.values(os.networkInterfaces()))
     for (const a of list) if (a.family === "IPv4" && !a.internal) return `http://${a.address}:${PORT}`;
   return `http://localhost:${PORT}`;
@@ -44,20 +44,36 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const rooms = new Map(); // code -> { host, players: Map(id -> {name, ws}), timer }
+const rooms = new Map();
 const LETTERS = "BCDFGHJKLMNPQRSTVWXZ"; // no vowels: no accidental words
 
-function newCode() {
+function newRoom() {
   let c;
   do { c = Array.from({ length: 4 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join(""); } while (rooms.has(c));
-  return c;
+  const r = G.createRoom(c, lanUrl());
+  rooms.set(c, r);
+  return r;
 }
 const send = (ws, obj) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
 const rid = () => Math.random().toString(36).slice(2, 10);
 
+// a room nobody is connected to anymore disappears after a while
+function maybeCleanup(r) {
+  clearTimeout(r.cleanup);
+  if (r.host || [...r.players.values()].some((p) => p.online)) return;
+  r.cleanup = setTimeout(() => { r.timers.forEach(clearTimeout); rooms.delete(r.code); }, 10 * 60 * 1000);
+}
+
 const wss = new WebSocketServer({ server, maxPayload: MAX_MSG });
 wss.on("connection", (ws) => {
   let room = null, role = null, pid = null;
+
+  const joinAs = (r, name) => {
+    pid = rid();
+    room = r; role = "player";
+    send(ws, { t: "joined", id: pid, code: r.code, name });
+    G.addPlayer(r, pid, name, ws);
+  };
 
   ws.on("message", (raw) => {
     let m;
@@ -66,58 +82,56 @@ wss.on("connection", (ws) => {
 
     if (!role && m.t === "host") {
       const existing = typeof m.code === "string" && rooms.get(m.code);
-      if (existing && !existing.host) { room = existing; clearTimeout(room.timer); }
-      else { room = { code: newCode(), host: null, players: new Map() }; rooms.set(room.code, room); }
+      room = existing && !existing.host ? existing : newRoom();
       room.host = ws; role = "host";
-      send(ws, { t: "room", code: room.code, url: lanUrl() });
+      clearTimeout(room.cleanup);
+      send(ws, { t: "room", code: room.code, url: room.link });
+      if (room.phase === "lobby") G.pushLobby(room);
+      G.view(room);
       return;
     }
 
-    if (!role && m.t === "join") {
-      const code = String(m.code || "").toUpperCase().trim();
+    if (!role && (m.t === "join" || m.t === "create")) {
       const name = String(m.name || "").trim().slice(0, 12);
-      const r = rooms.get(code);
-      if (!r || !r.host) return send(ws, { t: "error", msg: "Raum nicht gefunden." });
       if (!name) return send(ws, { t: "error", msg: "Bitte gib einen Namen ein." });
+      if (m.t === "create") {
+        const r = newRoom();
+        r.phoneMode = true; // no big screen: everything shows on the phones
+        return joinAs(r, name);
+      }
+      const r = rooms.get(String(m.code || "").toUpperCase().trim());
+      if (!r) return send(ws, { t: "error", msg: "Raum nicht gefunden." });
       const old = typeof m.pid === "string" && r.players.get(m.pid);
       if (old) {
         if (old.ws && old.ws !== ws) old.ws.close();
-        old.ws = ws; pid = m.pid;
-        send(r.host, { t: "rejoin", id: pid });
-      } else {
-        for (const p of r.players.values())
-          if (p.name.toLowerCase() === name.toLowerCase()) return send(ws, { t: "error", msg: "Name ist schon vergeben." });
-        if (r.players.size >= MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });
-        pid = rid();
-        r.players.set(pid, { name, ws });
-        send(r.host, { t: "join", id: pid, name });
+        pid = m.pid; room = r; role = "player";
+        clearTimeout(r.cleanup);
+        send(ws, { t: "joined", id: pid, code: r.code, name: old.name });
+        G.rejoin(r, pid, ws);
+        return;
       }
-      room = r; role = "player";
-      send(ws, { t: "joined", id: pid, code, name: r.players.get(pid).name });
-      return;
+      for (const p of r.players.values())
+        if (p.name.toLowerCase() === name.toLowerCase()) return send(ws, { t: "error", msg: "Name ist schon vergeben." });
+      if (r.players.size >= G.MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });
+      clearTimeout(r.cleanup);
+      return joinAs(r, name);
     }
 
-    if (role === "player" && m.t === "msg") return send(room.host, { t: "msg", id: pid, d: m.d });
-    if (role === "host" && m.t === "to") return send(room.players.get(m.id)?.ws, { t: "msg", d: m.d });
-    if (role === "host" && m.t === "all") { for (const p of room.players.values()) send(p.ws, { t: "msg", d: m.d }); return; }
-    if (role === "host" && m.t === "kick") {
-      const p = room.players.get(m.id);
-      if (p) { send(p.ws, { t: "error", msg: m.msg || "Du wurdest entfernt." }); p.ws?.close(); room.players.delete(m.id); }
-    }
+    if (role === "player" && m.t === "msg") return G.onPlayer(room, pid, m.d);
+    if (role === "host" && m.t === "mode" && room.phase === "lobby") return G.setMode(room, m.phone);
   });
 
   ws.on("close", () => {
     if (!room) return;
     if (role === "player") {
       const p = room.players.get(pid);
-      if (p && p.ws === ws) { p.ws = null; send(room.host, { t: "leave", id: pid }); }
+      if (p && p.ws === ws) { p.ws = null; G.leave(room, pid); }
     } else if (role === "host" && room.host === ws) {
-      room.host = null;
-      for (const p of room.players.values()) send(p.ws, { t: "hostgone" });
-      // keep room briefly so a reloaded host can reclaim it
-      room.timer = setTimeout(() => rooms.delete(room.code), 5 * 60 * 1000);
+      room.host = null; // the game keeps running; a reloaded screen reclaims the room
+      if (room.phase === "lobby") G.pushLobby(room);
     }
+    maybeCleanup(room);
   });
 });
 
-server.listen(PORT, () => console.log(`KONTEXTLOS server on ${lanUrl()}  (host: /host/  phones: /)`));
+server.listen(PORT, () => console.log(`KONTEXTLOS server on ${lanUrl()}  (big screen: /host/  phones: /)`));
