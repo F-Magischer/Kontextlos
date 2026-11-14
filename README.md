@@ -3,6 +3,9 @@
 Party-Spiel für 3–8 Leute im Browser. Sag was Harmloses — die anderen machen's schlimm.
 Design & Art Direction: siehe [DESIGN.md](DESIGN.md).
 
+**Live:** https://kontextlos.onrender.com (Handys) · https://kontextlos.onrender.com/host/ (großer Bildschirm)
+Gehostet auf Render (free, Frankfurt), deployt automatisch bei jedem Push auf `main`.
+
 ```
 game/     Godot 4.7 – der große Bildschirm (zeigt nur an, was der Server schickt)
 server/   Node – Spiellogik (game.js), Räume, Texte (content.js), Handy-Seite (public/index.html), QR-Codes
