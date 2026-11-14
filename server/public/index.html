@@ -272,7 +272,10 @@ function show(d) {
     if (sentKey === d.key) return waitScreen("Abgeschickt.", "Warte auf die anderen …");
     const max = d.max || 80;
     app.innerHTML = d.post
-      ? `<p class="mono">${esc(d.tag)}</p><h2>Gib dem Ganzen einen neuen Kontext.</h2>${timerHTML}
+      ? `<p class="mono">${esc(d.tag)}</p><h2>${d.qword ? "Stell die Frage, auf die diese Antwort passt." : "Wie geht der Satz weiter?"}</h2>
+         ${d.qword ? `<div class="card prompt" style="--r:.8deg;padding:10px 14px;margin:0 0 6px"><span class="mono">Tipp</span>
+           <p style="font-weight:700">Die Antwort passt auf eine <b>${esc(d.qword)}</b>-Frage. Der Anfang steht schon drin.</p>${d.qhint ? `<p style="font-size:15px;margin-top:4px">${esc(d.qhint)}</p>` : ""}</div>` : ""}
+         ${timerHTML}
          <div class="slap">${post(d.post, { edit: true, placeholder: d.placeholder, max })}</div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`
       : `<p class="mono">${esc(d.tag)}</p>${timerHTML}
@@ -282,9 +285,11 @@ function show(d) {
     const t = $("#txt");
     const grow = () => { if (d.post) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; } };
     t.oninput = () => { $("#cnt").textContent = `${t.value.length}/${max}`; grow(); };
-    grow();
+    if (d.post && d.qword) t.value = d.qword + " "; // start the question with the matching question word
+    t.oninput();
     const submit = () => { sentKey = d.key; out({ a: "submit", key: d.key, text: t.value.trim() }); waitScreen("Abgeschickt.", "Warte auf die anderen …"); };
-    $("#send").onclick = () => { if (!t.value.trim()) return t.focus(); submit(); };
+    t.onfocus = () => { const n = t.value.length; t.setSelectionRange(n, n); };
+    $("#send").onclick = () => { if (!t.value.trim() || t.value.trim() === d.qword) return t.focus(); submit(); };
     // time's up: send whatever is typed (the game fills in a fallback if it's empty)
     timer(d.seconds, () => { if (sentKey !== d.key) { t.blur(); submit(); waitScreen("Zeit um!", "Dein Text wurde abgeschickt."); } });
 

@@ -79,6 +79,18 @@ function sleep(r, sec) {
   return new Promise((res) => r.timers.push(setTimeout(() => res(r.gen === g), (sec * 1000) / SPEED)));
 }
 
+// What kind of question the honest answer fits ("Was", "Wie viel", "Womit" …).
+// The twister gets this (never the question itself) so the new question matches the answer grammatically.
+const QWORDS = ["Wie viele", "Wie viel", "Wie lange", "Wie oft", "Womit", "Wofür", "Wobei", "Wovon", "Worüber", "Welches", "Welche", "Welcher", "Warum", "Wann", "Wer", "Wo", "Wie", "Was"];
+function questionType(prompt) {
+  if (/^Beschreib/.test(prompt)) return { word: "Wie", hint: "Die Antwort beschreibt etwas oder jemanden." };
+  if (/^Was (sagst|rufst|flüsterst|murmelst|schreibst|antwortest|singst) /.test(prompt))
+    return { word: "Was", hint: "Die Antwort ist ein Satz, den jemand sagt – z. B. „Was sagen Sie, wenn …?“" };
+  if (/^Was (machst|tust|würdest du tun)/.test(prompt))
+    return { word: "Was", hint: "Die Antwort ist etwas, das jemand tut – z. B. „Was machen Sie, wenn …?“" };
+  return { word: QWORDS.find((q) => prompt.startsWith(q + " ")) || "Was", hint: "" };
+}
+
 function pickPrompt(r) {
   let pool = C.PROMPTS.filter((p) => !r.used.has(p));
   if (!pool.length) { r.used.clear(); pool = C.PROMPTS; }
@@ -124,7 +136,11 @@ function onPlayer(r, id, d) {
     for (const p of r.posts) if (p.answerer === id && !p.answer) p.answer = clean(d.text, 80);
     view(r); checkDone(r);
   } else if (d.a === "submit" && r.phase === "twist" && key === `t${r.round}`) {
-    for (const p of r.posts) if (p.twister === id && !p.twist) p.twist = clean(d.text, 70);
+    for (const p of r.posts) {
+      if (p.twister !== id || p.twist) continue;
+      const t = clean(d.text, 70);
+      p.twist = t === questionType(p.prompt).word ? "" : t; // only the prefilled word: counts as empty
+    }
     view(r); checkDone(r);
   } else if (d.a === "vote" && r.phase === "vote" && key === `v${r.round}` && inRound(r, id) && !r.votes.has(id)) {
     const i = Number(d.i);
@@ -204,7 +220,8 @@ function endAnswer(r) {
     const post = payload(r, p);
     delete post.prompt;
     delete post.twist;
-    to(r, p.twister, { s: "write", key: `t${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Verdrehen · ${p.fmt.name}`, post,
+    const qt = questionType(p.prompt);
+    to(r, p.twister, { s: "write", key: `t${r.round}`, qword: p.fmt.kind === "lastwords" ? "" : qt.word, qhint: qt.hint, tag: `Runde ${r.round}/${r.rounds} · Verdrehen · ${p.fmt.name}`, post,
       placeholder: p.fmt.kind === "lastwords" ? `… kurz bevor … – ${p.fmt.hint}` : `Was fragt ${p.fmt.q}? ${p.fmt.hint}`, max: 70, seconds: T.twist / SPEED });
   }
   waitOthers(r);
