@@ -94,18 +94,22 @@ exports.PROMPTS = [
   "Was würdest du heimlich in die Firmen-Kaffeemaschine kippen?",
 ];
 
+// Each format turns the original answer into the punchline of a new situation.
 // label/hint: placeholder of the slot the twister types into. fallback: used when they type nothing.
 exports.FORMATS = [
-  { id: "headline", name: "Schlagzeile", label: "Schlagzeile", hint: "z. B. Polizei ratlos: …", fallback: "Nachbarn alarmiert: Wer ist diese Person?" },
-  { id: "video", name: "Videokommentar", label: "Videotitel", hint: "z. B. Opa reagiert auf …", fallback: "Meine Knie-OP komplett (ungeschnitten)" },
-  { id: "review", name: "Bewertung", label: "Produkt", hint: "z. B. Feuchttücher für Hunde", fallback: "Notfall-Grabstein (Bausatz)" },
-  { id: "dating", name: "Dating-Profil", label: "Profil-Überschrift", hint: "z. B. Suche jemanden, der …", fallback: "Suche Partner:in für die Steuererklärung" },
-  { id: "search", name: "Suchergebnis", label: "Suchanfrage", hint: "z. B. ist es normal, dass …", fallback: "wie lange darf man im Baumarkt wohnen" },
-  { id: "chat", name: "Gruppenchat", label: "Gruppenname", hint: "z. B. Familie (ohne Mama)", fallback: "Elternabend 3b" },
+  { id: "police", name: "Polizeiverhör", label: "Frage der Kommissarin", hint: "z. B. Wo waren Sie gestern um 23 Uhr?", fallback: "Warum ist Ihr Kofferraum so nass?" },
+  { id: "job", name: "Bewerbungsgespräch", label: "Frage vom Personalchef", hint: "z. B. Was ist Ihre größte Schwäche?", fallback: "Warum sollten wir ausgerechnet Sie nehmen?" },
+  { id: "forum", name: "Hilfe-Forum", label: "Frage im Forum", hint: "z. B. Ist es normal, dass mein Hund …", fallback: "Mein Nachbar starrt mich nachts an. Was tun?" },
+  { id: "lastwords", name: "Letzte Worte", label: "… kurz bevor …", hint: "z. B. der Bär aufwachte", fallback: "der Fallschirm nicht aufging" },
+  { id: "headline", name: "Schlagzeile", label: "Schlagzeile", hint: "z. B. Polizei ratlos: Frau isst Bank leer", fallback: "Nachbarn alarmiert: Wer ist diese Person?" },
+  { id: "video", name: "Videokommentar", label: "Videotitel", hint: "z. B. Opa reagiert auf seine Röntgenbilder", fallback: "Meine Knie-OP komplett (ungeschnitten)" },
+  { id: "review", name: "1-Stern-Bewertung", label: "Produkt", hint: "z. B. Feuchttücher für Hunde", fallback: "Notfall-Grabstein (Bausatz)" },
   { id: "classified", name: "Kleinanzeige", label: "Was wird verkauft?", hint: "z. B. gebrauchter Sarg", fallback: "Ehering, kaum benutzt" },
-  { id: "poster", name: "Motivationsposter", label: "Großes Wort", hint: "z. B. DURCHHALTEN", fallback: "ERFOLG" },
 ];
 
 exports.NO_ANSWER = ["Dazu sage ich nichts ohne meinen Anwalt.", "Frag nicht.", "Kein Kommentar.", "Das bleibt unter uns."];
 
-exports.PLAYER_COLORS = ["#FF4F79", "#2B59C3", "#1F9E6E", "#F26419", "#6B4BD8", "#0B8A8A", "#C8372D", "#6E7F1D"];
+// 20 distinct print-ish inks (white text stays readable on all of them)
+exports.PLAYER_COLORS = ["#FF4F79", "#2B59C3", "#1F9E6E", "#F26419", "#6B4BD8", "#0B8A8A", "#C8372D", "#6E7F1D",
+  "#D6336C", "#1C7ED6", "#2F9E44", "#E8590C", "#7048E8", "#0C8599", "#A61E4D", "#5C940D",
+  "#862E9C", "#364FC7", "#B35C00", "#495057"];

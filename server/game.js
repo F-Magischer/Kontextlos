@@ -4,7 +4,8 @@ const C = require("./content");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
 const ROUNDS = 3;
-const MIN_PLAYERS = 3;
+const MIN_PLAYERS = 2;
+const MAX_PLAYERS = 20;
 const T = { answer: 60, twist: 75, vote: 30, grace: 1.5, title: 2.4, head: 3.5, body: 5.5, origin: 4, board: 9, scores: 7 };
 const PTS_TWIST = 100, PTS_PITY = 40;
 
@@ -147,7 +148,8 @@ function setMode(r, phone) {
 
 function pushLobby(r) {
   for (const id of r.order)
-    to(r, id, { s: "lobby", vip: id === vip(r), count: online(r).length, phoneMode: r.phoneMode, showOrigin: r.showOrigin, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
+    to(r, id, { s: "lobby", vip: id === vip(r), count: online(r).length, min: MIN_PLAYERS, max: MAX_PLAYERS,
+      players: online(r).map((pid) => ({ name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })), phoneMode: r.phoneMode, showOrigin: r.showOrigin, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
 }
 
 function toLobby(r) {
@@ -207,7 +209,8 @@ async function reveal(r) {
   view(r);
   if (!(await sleep(r, T.title))) return;
   // each post in beats: twist alone → the answer drops in → (optional) the innocent question behind it
-  const beats = [[1, T.head], [2, T.body], ...(r.showOrigin ? [[3, T.origin]] : [])];
+  const quick = r.posts.length > 8 ? 0.7 : 1; // big groups: keep a round under ~3 minutes
+  const beats = [[1, T.head * quick], [2, T.body * quick], ...(r.showOrigin ? [[3, T.origin * quick]] : [])];
   for (let i = 0; i < r.posts.length; i++) {
     for (const [stage, sec] of beats) {
       r.beat = { i, stage };
@@ -282,4 +285,4 @@ function checkDone(r) {
   else if (r.phase === "vote" && r.posts.every((p) => r.votes.has(p.answerer) || off(p.answerer))) endVote(r);
 }
 
-module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOrigin, view, pushLobby, MAX_PLAYERS: 8 };
+module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOrigin, view, pushLobby, MAX_PLAYERS };

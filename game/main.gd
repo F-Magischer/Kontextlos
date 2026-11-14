@@ -10,7 +10,7 @@ const YELLOW := Color("#FFD23F")
 const WHITE := Color("#FFFDF7")
 const W := 1920.0
 const H := 1080.0
-const MIN_PLAYERS := 3
+const MIN_PLAYERS := 2
 
 var ws := WebSocketPeer.new()
 var hello_sent := false
@@ -49,7 +49,8 @@ func _ready() -> void:
 		if a.begins_with("--shots="): _shoot(a.trim_prefix("--shots="))
 	if OS.has_feature("web"):
 		server_url = str(JavaScriptBridge.eval("(location.protocol==='https:'?'wss://':'ws://')+location.host"))
-		room_code = str(JavaScriptBridge.eval("sessionStorage.getItem('kl_room')||''"))  # survive a reload
+		# ?code=ABCD (from the start page) joins that room as its big screen; otherwise survive a reload
+		room_code = str(JavaScriptBridge.eval("(new URLSearchParams(location.search).get('code')||sessionStorage.getItem('kl_room')||'').toUpperCase()"))
 	f_black = _font(800, 80)
 	f_bold = _font(700, 90)
 	f_mid = _font(500, 100)
@@ -361,21 +362,28 @@ func _draw_lobby() -> void:
 	], 10)
 	_put(side, Vector2(700, 820), 0, 0, false)
 
-	for i in 8:
-		var center := Vector2(1240 + (i % 2) * 400, 300 + (i / 2) * 170)
-		if i < order.size():
+	var n := order.size()
+	var slots := clampi(n, 8, 20)
+	var cols := 2 if slots <= 8 else (3 if slots <= 12 else 4)
+	var rows := ceili(slots / float(cols))
+	var cw := 860.0 / cols
+	var ch := minf(170.0, 740.0 / rows)
+	var nsz := 50 if cols == 2 else (36 if cols == 3 else 28)
+	for i in slots:
+		var center := Vector2(1030 + cw * (i % cols) + cw / 2, 220 + ch * (i / cols) + ch / 2)
+		if i < n:
 			var p: Dictionary = players[order[i]]
-			var b := _box(Color(p.color) if p.online else WHITE, 18, 8)
-			b.custom_minimum_size = Vector2(340, 0)
+			var b := _box(Color(p.color) if p.online else WHITE, 14, 6)
+			b.custom_minimum_size = Vector2(cw - 40, 0)
 			var tag := "BOSS" if p.vip else ("OFFLINE" if not p.online else "BEREIT")
-			b.add_child(_col([_mono(tag, 18, WHITE if p.online else INK), _label(p.name, 50, WHITE if p.online else INK, f_black)], 0))
+			b.add_child(_col([_mono(tag, 16, WHITE if p.online else INK), _label(p.name, nsz, WHITE if p.online else INK, f_black)], 0))
 			var k := "p%s%s" % [p.id, p.online]
 			_put(b, center, _tilt(i), 0, not seen.has(k))
 			seen[k] = true
 		else:
-			var e := _box(Color(INK, 0.04), 18, 0, 3)
-			e.custom_minimum_size = Vector2(340, 112)
-			e.add_child(_mono("frei", 20, Color(INK, 0.35)))
+			var e := _box(Color(INK, 0.04), 14, 0, 3)
+			e.custom_minimum_size = Vector2(cw - 40, ch * 0.62)
+			e.add_child(_mono("frei", 18, Color(INK, 0.35)))
 			_put(e, center, 0, 0, false)
 
 	var need := MIN_PLAYERS - _online().size()
@@ -393,14 +401,14 @@ func _draw_writing(title: String, sub: String, done_key: String, name_key: Strin
 		var p: Dictionary = v.posts[i]
 		var done: bool = p[done_key]
 		var col := Color(p.color) if done_key == "aDone" else Color(_color_of(p.twister))
-		var b := _box(col if done else WHITE, 16, 8 if done else 0, 3)
-		b.custom_minimum_size = Vector2(300, 0)
+		var b := _box(col if done else WHITE, 14, 8 if done else 0, 3)
+		b.custom_minimum_size = Vector2(310, 0)
 		var state := "FERTIG" if done else ("SCHREIBT …" if p[online_key] else "OFFLINE")
-		b.add_child(_col([_mono(state, 18, WHITE if done else INK), _label(p[name_key], 44, WHITE if done else INK, f_black)], 0))
-		var cols := mini(n, 4)
-		var x := W / 2 + ((i % 4) - (cols - 1) / 2.0) * 360
+		b.add_child(_col([_mono(state, 18, WHITE if done else INK), _label(p[name_key], 44 if n <= 10 else 32, WHITE if done else INK, f_black)], 0))
+		var cols := mini(n, 5)
+		var x := W / 2 + ((i % 5) - (cols - 1) / 2.0) * 350
 		var k := "%s%s" % [p[name_key], done]
-		_put(b, Vector2(x, 650 + (i / 4) * 160), _tilt(i) if done else 0.0, 0, not seen.has(k))
+		_put(b, Vector2(x, 600 + (i / 5) * (150 if n <= 10 else 115)), _tilt(i) if done else 0.0, 0, not seen.has(k))
 		seen[k] = true
 
 
@@ -505,121 +513,139 @@ func _ans(n: Control) -> Control:
 
 
 ## One fake internet post. `s` scales everything so the same layout works on the vote board.
+## The twist is the setup, the original answer (wrapped in _ans) is the punchline.
 func _post_card(p: Dictionary, s: float) -> Control:
-	var w := 1180.0 * s
-	var fs := func(x: float) -> int: return maxi(int(x * s), 13)  # keep small print readable on the vote board
+	var w := 1300.0 * s
+	var pad := maxi(int(30 * s), 8)
+	var inner := w - pad * 2
+	var z := func(x: float) -> int: return maxi(int(x * s), 9)  # scale everything together so small cards keep their proportions
 	var who: String = p.who
 	var who_col := Color(p.color)
 	match p.f:
+		"police", "job", "forum":
+			var heads := {"police": ["Protokoll · Vernehmung · Az. 0815/26", INK, "Kommissarin", "Verdächtige Person"],
+				"job": ["Bewerbungsgespräch · Stelle: Filialleitung", BLUE, "Personalchef", "Bewerber:in"],
+				"forum": ["Hilfe-Forum › Alltag & Leben", Color("#1F9E6E"), "Frage von anonym_1987", "★ Hilfreichste Antwort"]}
+			var head: Array = heads[p.f]
+			var a_text: String = p.answer if p.f == "forum" else "„%s“" % p.answer
+			var q := _box(Color.TRANSPARENT, pad, 0, 0)
+			q.add_child(_col([_mono(head[2], z.call(22)), _label(p.twist, z.call(66), INK, f_black, inner)], 4))
+			var a := _box(Color.TRANSPARENT, pad, 0, 0)
+			a.add_child(_col([_mono(head[3], z.call(22)), _label(who, z.call(40), who_col, f_black), _label(a_text, z.call(52), INK, f_bold, inner)], 4))
+			var b := _box(Color("#F4F1EA") if p.f == "police" else WHITE, 0)
+			b.add_child(_col([_bar(head[0], head[1], PAPER, z.call(20), w), q, _rect(Color(INK, 0.3), Vector2(w, 2)), _ans(a)], 0))
+			return b
+		"lastwords":
+			var body := _box(Color.TRANSPARENT, pad, 0, 0)
+			body.add_child(_col([_mono("Die letzten Worte von %s, kurz bevor" % who, z.call(24), PAPER),
+				_label(p.twist, z.call(66), YELLOW, f_black, inner),
+				_ans(_label("„%s“" % p.answer, z.call(62), PAPER, f_black, inner))], z.call(12)))
+			var b := _box(INK, 0)
+			b.add_child(_col([_bar("Letzte Worte", PINK, WHITE, z.call(20), w), body], 0))
+			return b
 		"headline":
-			var b := _box(WHITE, fs.call(36))
+			var b := _box(WHITE, pad)
 			b.add_child(_col([
-				_row([_label("Der Tagesbote", fs.call(40), INK, f_black), _mono("Ausgabe 214 · 1,80 €", fs.call(18))], fs.call(30)),
-				_rect(INK, Vector2(w, fs.call(5))),
-				_label(p.twist, fs.call(76), INK, f_black, w),
-				_ans(_label("„%s“, sagt %s." % [p.answer, who], fs.call(38), INK, f_mid, w)),
-			], fs.call(16)))
+				_row([_label("Der Tagesbote", z.call(46), INK, f_black), _mono("Sa., 1,80 €", z.call(20))], z.call(30)),
+				_rect(INK, Vector2(inner, maxi(int(5 * s), 2))),
+				_label(p.twist, z.call(80), INK, f_black, inner),
+				_ans(_col([_label("„%s“" % p.answer, z.call(52), INK, f_bold, inner), _mono("— %s, Augenzeug:in" % who, z.call(24))], 4)),
+			], z.call(12)))
 			return b
 		"video":
-			var thumb := _box(INK, fs.call(28), 0, 0)
-			thumb.custom_minimum_size = Vector2(w, fs.call(300))
-			thumb.add_child(_col([_label(p.twist, fs.call(60), WHITE, f_black, w - fs.call(56)), _rect(PINK, Vector2(w * 0.38, fs.call(8))), _mono("12:47 · 2,1 Mio. Aufrufe", fs.call(18), PAPER)], fs.call(18)))
-			var b := _box(WHITE, fs.call(20))
-			b.add_child(_col([thumb, _ans(_mono("1.204 Kommentare", fs.call(18))),
-				_ans(_row([_rect(who_col, Vector2(fs.call(56), fs.call(56))), _col([_mono("@" + who, fs.call(20), who_col), _label(p.answer, fs.call(40), INK, f_mid, w - fs.call(90))], 2)], fs.call(18))),
-			], fs.call(16)))
+			var thumb := _box(INK, pad, 0, 0)
+			thumb.custom_minimum_size = Vector2(w, 300 * s)
+			thumb.add_child(_col([_label(p.twist, z.call(66), WHITE, f_black, inner), _rect(PINK, Vector2(w * 0.38, maxi(int(8 * s), 3))), _mono("12:47 · 2,1 Mio. Aufrufe", z.call(20), PAPER)], z.call(14)))
+			var av: int = z.call(64)
+			var c := _box(Color.TRANSPARENT, pad, 0, 0)
+			c.add_child(_col([_mono("Top-Kommentar", z.call(22)),
+				_row([_rect(who_col, Vector2(av, av)), _col([_label(who, z.call(40), who_col, f_black), _label(p.answer, z.call(52), INK, f_bold, inner - av - 16)], 2)], 16)], 8))
+			var b := _box(WHITE, 0)
+			b.add_child(_col([thumb, _ans(c)], 0))
 			return b
 		"review":
-			var stars := _row([_rect(YELLOW, Vector2(fs.call(34), fs.call(34)))], fs.call(6))
+			var st: int = z.call(34)
+			var stars := _row([_rect(YELLOW, Vector2(st, st))], z.call(6))
 			for i in 4:
 				var empty := _box(WHITE, 0, 0, 3)
-				empty.custom_minimum_size = Vector2(fs.call(34), fs.call(34))
+				empty.custom_minimum_size = Vector2(st, st)
 				stars.add_child(empty)
-			var b := _box(WHITE, fs.call(36))
-			b.add_child(_col([_mono("Kundenbewertung", fs.call(20), BLUE), _label(p.twist, fs.call(62), INK, f_black, w),
-				_ans(_row([stars, _mono("1 von 5 · Verifizierter Kauf", fs.call(18))], fs.call(16))),
-				_ans(_label("„%s“" % p.answer, fs.call(42), INK, f_mid, w)), _ans(_mono("— %s, vor 3 Tagen" % who, fs.call(18)))], fs.call(14)))
+			stars.add_child(_mono("1 von 5", z.call(20)))
+			var b := _box(WHITE, pad)
+			b.add_child(_col([_mono("Kundenbewertung zu", z.call(22), BLUE), _label(p.twist, z.call(70), INK, f_black, inner),
+				_ans(_col([stars, _label(who, z.call(40), who_col, f_black), _label("„%s“" % p.answer, z.call(52), INK, f_bold, inner)], 6))], z.call(10)))
 			return b
-		"dating":
-			var b := _box(PINK, fs.call(36))
-			b.add_child(_col([_row([_label(who + ", 31", fs.call(56), WHITE, f_black), _mono("0,4 km entfernt", fs.call(18), WHITE)], fs.call(20)),
-				_label(p.twist, fs.call(64), INK, f_black, w), _ans(_mono("Über mich", fs.call(18), WHITE)), _ans(_label(p.answer, fs.call(44), WHITE, f_mid, w))], fs.call(12)))
-			return b
-		"search":
-			var bar := _box(WHITE, fs.call(20), fs.call(6), 3)
-			bar.add_child(_label(p.twist, fs.call(50), INK, f_bold, w - fs.call(40)))
-			var b := _box(WHITE, fs.call(32))
-			b.add_child(_col([bar, _ans(_mono("Ungefähr 3 Ergebnisse (0,41 s)", fs.call(18))), _ans(_mono("Ratgeber-Forum › Beitrag von " + who, fs.call(18), BLUE)),
-				_ans(_label("„%s“" % p.answer, fs.call(46), INK, f_mid, w))], fs.call(16)))
-			return b
-		"chat":
-			var head := _box(BLUE, fs.call(20), 0, 0)
-			head.custom_minimum_size.x = w
-			head.add_child(_col([_label(p.twist, fs.call(52), WHITE, f_black, w - fs.call(40)), _mono("6 Mitglieder", fs.call(18), WHITE)], 0))
-			var bubble := _box(WHITE, fs.call(22), fs.call(6), 3)
-			bubble.add_child(_col([_mono(who, fs.call(20), who_col), _label(p.answer, fs.call(44), INK, f_mid, w * 0.75), _mono("23:47", fs.call(16))], 4))
-			var b := _box(Color("#DCE3EE"), 0)
-			b.add_child(_col([head, _ans(_wrap(_row([_rect(Color.TRANSPARENT, Vector2(fs.call(10), 1)), bubble]))), _rect(Color.TRANSPARENT, Vector2(1, fs.call(14)))], fs.call(22)))
-			return b
-		"classified":
-			var b := _box(YELLOW, fs.call(36))
-			b.add_child(_col([_mono("Kleinanzeige · Nr. 0815", fs.call(20)), _label("Verkaufe: " + p.twist, fs.call(66), INK, f_black, w),
-				_ans(_label(p.answer, fs.call(42), INK, f_mid, w)), _rect(INK, Vector2(w, 3)), _ans(_mono("VB · Nur Abholung · Kontakt: " + who, fs.call(18)))], fs.call(14)))
-			return b
-		_:  # poster
-			var inner := _col([_label(p.twist.to_upper(), fs.call(96), PAPER, f_black, w, HORIZONTAL_ALIGNMENT_CENTER),
-				_ans(_label(p.answer, fs.call(40), PAPER, f_mid, w, HORIZONTAL_ALIGNMENT_CENTER)), _ans(_mono("— " + who, fs.call(18), PINK))], fs.call(18))
-			var b := _box(INK, fs.call(50))
-			b.add_child(inner)
+		_:  # classified
+			var b := _box(YELLOW, pad)
+			b.add_child(_col([_mono("Kleinanzeige · Nr. 0815", z.call(22)), _label("Verkaufe: " + p.twist, z.call(70), INK, f_black, inner),
+				_ans(_col([_label(p.answer, z.call(52), INK, f_bold, inner), _rect(INK, Vector2(inner, 3)), _mono("VB · Nur Abholung · Kontakt: " + who, z.call(22))], 8))], z.call(10)))
 			return b
 
+
+func _bar(text: String, bg: Color, fg: Color, size: int, w: float) -> Control:
+	var b := _box(bg, maxi(size / 2, 6), 0, 0)
+	b.custom_minimum_size.x = w
+	b.add_child(_mono(text, size, fg))
+	return b
 
 
 func _draw_board(counts: Array) -> void:
 	_clear()
 	var results := counts.size() > 0
-	_put(_label("Am schlimmsten?" if not results else "Auszählung.", 96, INK, f_black), Vector2(W / 2, 190), -1.5, 0, not seen.has("t"))
+	_put(_label("Am schlimmsten?" if not results else "Auszählung.", 96, INK, f_black), Vector2(W / 2, 170), -1.5, 0, not seen.has("t"))
 	var n: int = v.posts.size()
 	if not results:
-		_put(_mono("Abstimmen auf dem Handy · %d/%d Stimmen" % [v.voted, n], 24), Vector2(W / 2, 270), 0, 0, false)
+		_put(_mono("Abstimmen auf dem Handy · %d/%d Stimmen" % [v.voted, n], 24), Vector2(W / 2, 245), 0, 0, false)
 	seen["t"] = true
-	var cols := 2 if n <= 4 else (3 if n <= 6 else 4)
-	var s := 0.6 if cols == 2 else (0.44 if cols == 3 else 0.33)
+	var cols := 1 if n == 1 else (2 if n <= 4 else (3 if n <= 9 else (4 if n <= 12 else 5)))
+	var rows := ceili(n / float(cols))
+	var cw := 1800.0 / cols
+	var ch := 780.0 / rows
+	var s := minf(cw * 0.9 / 1300.0, ch * 0.85 / 520.0)
 	var top := 0
 	for c in counts: top = maxi(top, int(c))
 	for i in n:
-		var x := W / 2 + ((i % cols) - (cols - 1) / 2.0) * (W / cols - 20)
-		var y := 460.0 + (i / cols) * 400.0 if n > cols else 620.0
+		var x := 60.0 + cw * (i % cols) + cw / 2
+		var y := 290.0 + ch * (i / cols) + ch / 2
 		var card := _post_card(v.posts[i], s)
-		_put(card, Vector2(x, y), _tilt(i), i * 0.04, not seen.has("c%d" % i))
+		_put(card, Vector2(x, y), _tilt(i) * 0.6, i * 0.03, not seen.has("c%d" % i))
 		seen["c%d" % i] = true
 		if results:
 			var c := int(counts[i])
-			var stamp := _box(PINK if c == top and c > 0 else WHITE, 12, 6, 3)
 			var hot := c == top and c > 0
-			stamp.add_child(_col([_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], 36, WHITE if hot else INK, f_black),
-				_mono("verdreht von %s" % v.posts[i].twister, 18, WHITE if hot else INK)], 0))
-			_put(stamp, Vector2(x + 400 * s, y - 300 * s), 8.0, 0.3 + i * 0.12)
+			var big := 34 if n <= 9 else 24
+			var stamp := _box(PINK if hot else WHITE, 10, 6, 3)
+			stamp.add_child(_col([_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], big, WHITE if hot else INK, f_black),
+				_mono("verdreht von %s" % v.posts[i].twister, int(big * 0.55), WHITE if hot else INK)], 0))
+			_put(stamp, Vector2(x + cw * 0.3, y - ch * 0.4), 6.0, 0.3 + i * 0.06)
 
 
 func _show_scores(gains: Dictionary) -> void:
 	if seen.has("scores"): return
 	seen["scores"] = true
 	_clear()
-	_put(_label("Punktestand", 110, INK, f_black), Vector2(W / 2, 200), -1.5)
+	_put(_label("Punktestand", 110, INK, f_black), Vector2(W / 2, 190), -1.5)
 	var ranked := _ranked()
+	var n := ranked.size()
+	var two := n > 10  # big groups: two columns
+	var per := ceili(n / 2.0) if two else n
+	var rh := minf(86.0, 740.0 / per)
+	var fsz := 44 if not two else 30
+	var bar_max := 760.0 if not two else 300.0
 	var best := maxi(1, int(players[ranked[0]].score))
-	for i in ranked.size():
+	for i in n:
 		var id: String = ranked[i]
 		var p: Dictionary = players[id]
 		var gain := int(gains.get(id, 0))
-		var bar := _rect(Color(p.color), Vector2(0, 54))
-		var line := _row([_label("%d" % (i + 1), 40, INK, f_mono), _label(p.name, 44, INK, f_black), bar,
-			_label("%d" % p.score, 40, INK, f_mono), _mono(("+%d" % gain) if gain > 0 else "", 26, PINK)], 22)
-		line.get_child(1).custom_minimum_size.x = 300
-		line.custom_minimum_size.x = 1440  # fixed width so growing bars don't re-centre the row
-		_put(line, Vector2(W / 2, 330 + i * 86), 0, i * 0.08)
-		create_tween().tween_property(bar, "custom_minimum_size:x", 760.0 * p.score / best + 8, 0.8).set_delay(0.2 + i * 0.08).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+		var bar := _rect(Color(p.color), Vector2(0, rh * 0.6))
+		var line := _row([_label("%d" % (i + 1), int(fsz * 0.9), INK, f_mono), _label(p.name, fsz, INK, f_black), bar,
+			_label("%d" % p.score, int(fsz * 0.9), INK, f_mono), _mono(("+%d" % gain) if gain > 0 else "", int(fsz * 0.6), PINK)], 18)
+		line.get_child(0).custom_minimum_size.x = fsz * 1.2
+		line.get_child(1).custom_minimum_size.x = 300 if not two else 200
+		line.custom_minimum_size.x = 1440 if not two else 860  # fixed width so growing bars don't re-centre the row
+		var x := W / 2 if not two else W / 2 - 450 + 900 * (i / per)
+		_put(line, Vector2(x, 310 + (i % per) * rh), 0, i * 0.05)
+		create_tween().tween_property(bar, "custom_minimum_size:x", bar_max * p.score / best + 8, 0.8).set_delay(0.2 + i * 0.05).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 
 
 func _draw_end() -> void:
@@ -629,12 +655,12 @@ func _draw_end() -> void:
 	var win: Dictionary = players[ranked[0]]
 	var b := _box(Color(win.color), 40, 14)
 	b.add_child(_col([_mono("%d Punkte" % win.score, 26, WHITE), _label("%s gewinnt." % win.name, 130, WHITE, f_black)], 0))
-	_put(b, Vector2(W / 2, 420), -2.5, 0, not seen.has("win"))
+	_put(b, Vector2(W / 2, 400), -2.5, 0, not seen.has("win"))
 	var s := _box(INK, 18, 8)
 	s.add_child(_label("Alle anderen: Kontext verloren.", 48, PAPER, f_black))
-	_put(s, Vector2(W / 2 + 120, 600), 2.0, 0.3, not seen.has("win"))
+	_put(s, Vector2(W / 2 + 120, 580), 2.0, 0.3, not seen.has("win"))
 	seen["win"] = true
 	var rest := []
 	for i in range(1, ranked.size()): rest.append("%d. %s  %d" % [i + 1, players[ranked[i]].name, players[ranked[i]].score])
-	_put(_mono("   ·   ".join(rest), 24), Vector2(W / 2, 760), 0, 0, false)
-	_put(_mono(("%s kann eine neue Runde starten." % _name(_vip())) if _vip() != "" else "", 22), Vector2(W / 2, 880), 0, 0, false)
+	_put(_label("   ·   ".join(rest).to_upper(), 24, INK, f_mono, 1600, HORIZONTAL_ALIGNMENT_CENTER), Vector2(W / 2, 760), 0, 0, false)
+	_put(_mono(("%s kann eine neue Runde starten." % _name(_vip())) if _vip() != "" else "", 22), Vector2(W / 2, 900), 0, 0, false)

@@ -8,85 +8,134 @@
 <style>
 @font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; }
 @font-face { font-family: "Plex"; src: url("fonts/IBMPlexMono-Medium.ttf"); }
-:root { --paper:#EFE7D6; --ink:#1B1A17; --pink:#FF4F79; --blue:#2B59C3; --yellow:#FFD23F; --me:var(--pink); }
+:root { --paper:#EFE7D6; --ink:#1B1A17; --pink:#FF4F79; --blue:#2B59C3; --yellow:#FFD23F; --white:#FFFDF7; --me:var(--pink); }
 * { box-sizing: border-box; margin: 0; }
-html, body { background: var(--paper); color: var(--ink); min-height: 100%; }
+html, body { background: var(--paper); color: var(--ink); }
 body {
-  font-family: "Brico", system-ui, sans-serif; font-stretch: 85%;
-  background-image: radial-gradient(rgba(27,26,23,.13) 1px, transparent 1.2px); background-size: 7px 7px;
-  padding: max(16px, env(safe-area-inset-top)) 16px 32px; -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh; font-family: "Brico", system-ui, sans-serif; font-stretch: 85%;
+  background-image: radial-gradient(rgba(27,26,23,.13) 1px, transparent 1.2px); background-size: 7px 7px; background-attachment: fixed;
+  -webkit-tap-highlight-color: transparent; overflow-x: hidden;
 }
-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 22px; }
-.logo { font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
-.logo span { background: var(--ink); color: var(--paper); padding: 0 4px; }
-.who { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; text-align: right; }
-.who b { background: var(--me); color: #fff; padding: 2px 6px; margin-left: 6px; }
+/* riso tape in the corners, like the big screen */
+body::before, body::after { content: ""; position: fixed; width: 260px; height: 38px; transform: rotate(-24deg); z-index: -1; opacity: .9; }
+body::before { background: var(--pink); left: -70px; bottom: 40px; }
+body::after { background: var(--blue); right: -80px; top: 120px; }
+.wrap { max-width: 560px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) 18px 40px; min-height: 100dvh; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 10px; margin-bottom: 20px; }
+.logo { font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
+.logo span { background: var(--ink); color: var(--paper); padding: 0 5px; }
+.who { display: flex; gap: 6px; align-items: center; font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; }
+.who .code { border: 2px solid var(--ink); padding: 2px 6px; background: var(--yellow); }
+.who b { background: var(--me); color: #fff; padding: 3px 7px; }
+main { flex: 1; display: flex; flex-direction: column; }
 .mono { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-h1 { font-weight: 800; font-size: 34px; line-height: .95; letter-spacing: -.03em; margin: 6px 0 14px; }
-h2 { font-weight: 700; font-size: 22px; line-height: 1.05; letter-spacing: -.01em; margin: 6px 0 12px; }
-p { font-size: 17px; line-height: 1.35; }
-.card { background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 14px; margin: 8px 0 22px; }
-.quote { background: var(--yellow); transform: rotate(1.2deg); }
-.quote .q { font-size: 21px; font-weight: 800; line-height: 1.1; margin-top: 4px; }
+h1 { font-weight: 800; font-size: clamp(40px, 12vw, 64px); line-height: .9; letter-spacing: -.035em; margin: 8px 0 14px; }
+h2 { font-weight: 800; font-size: 28px; line-height: 1.02; letter-spacing: -.02em; margin: 6px 0 14px; }
+p { font-size: 18px; line-height: 1.35; }
+.sticker { display: inline-block; background: var(--pink); color: #fff; font-weight: 800; font-size: 24px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); transform: rotate(2deg); }
+.card { background: var(--white); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 16px; margin: 8px 0 22px; }
+.prompt { background: var(--yellow); transform: rotate(-1.2deg); }
+.prompt .q { font-size: 28px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; margin-top: 6px; }
 label { display: block; margin-bottom: 6px; }
 input, textarea {
-  width: 100%; font: 600 20px "Brico", system-ui, sans-serif; color: var(--ink);
-  border: 3px solid var(--ink); background: #fff; padding: 12px; border-radius: 0; outline: none;
+  width: 100%; font: 600 21px "Brico", system-ui, sans-serif; color: var(--ink);
+  border: 3px solid var(--ink); background: var(--white); padding: 12px; border-radius: 0; outline: none;
 }
-input:focus, textarea:focus { box-shadow: 4px 4px 0 var(--me); }
+input:focus, textarea:focus { box-shadow: 5px 5px 0 var(--me); }
 textarea { min-height: 120px; resize: none; }
 input#code { text-transform: uppercase; letter-spacing: .3em; font-family: "Plex", monospace; }
 .field { margin-bottom: 16px; }
-.count { text-align: right; margin-top: -12px; margin-bottom: 8px; }
-button {
-  width: 100%; font: 800 22px "Brico", system-ui, sans-serif; letter-spacing: -.01em;
+.count { text-align: right; margin: -8px 0 8px; }
+button, .btn {
+  display: block; width: 100%; text-align: center; text-decoration: none; font: 800 23px "Brico", system-ui, sans-serif; letter-spacing: -.01em;
   background: var(--ink); color: var(--paper); border: 3px solid var(--ink); padding: 16px;
-  box-shadow: 5px 5px 0 var(--me); cursor: pointer; border-radius: 0; margin-top: 6px;
+  box-shadow: 5px 5px 0 var(--me); cursor: pointer; border-radius: 0; margin-top: 8px; transition: transform .06s, box-shadow .06s;
 }
-button:active { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--me); }
+button:active, .btn:active { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--me); }
 button:disabled { opacity: .35; }
-.opt { display: block; text-align: left; font: 600 18px/1.25 "Brico", system-ui, sans-serif; background: #fff; color: var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 0 0 14px; }
-.opt small { display: block; font: 12px "Plex", monospace; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
-.opt.full { padding: 0; background: none; border: 0; box-shadow: none; margin-bottom: 26px; }
-.err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; }
-.big { font-size: 64px; font-weight: 800; line-height: 1; }
-.timer { height: 8px; background: var(--ink); margin: 0 0 18px; transform-origin: left; }
-.row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 20px; }
-.row i { width: 18px; height: 18px; flex: none; }
-.row .pts { margin-left: auto; font-family: "Plex", monospace; font-size: 16px; }
-.row .gain { color: var(--pink); font-family: "Plex", monospace; font-size: 13px; min-width: 44px; text-align: right; }
+.ghost { background: var(--white); color: var(--ink); box-shadow: 5px 5px 0 var(--ink); }
+.small { font-size: 17px; padding: 11px; }
+.or { display: flex; align-items: center; gap: 10px; margin: 26px 0 10px; } .or::before, .or::after { content: ""; flex: 1; border-top: 2px dashed var(--ink); }
+.err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; border: 3px solid var(--ink); }
+.timer { position: relative; height: 12px; background: rgba(27,26,23,.12); margin: 22px 0 18px; }
+.timer i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
+.timer span { position: absolute; right: 0; top: -20px; font: 13px "Plex", monospace; }
+.bigcode { font: 64px/1 "Plex", monospace; letter-spacing: .12em; background: var(--yellow); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 10px 14px; display: inline-block; transform: rotate(-2deg); margin: 6px 0 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 22px; }
+.chip { color: #fff; font-weight: 800; font-size: 19px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.chip small { font: 10px "Plex", monospace; display: block; opacity: .85; text-transform: uppercase; }
+.wait { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 18px; padding-bottom: 60px; }
+.wait .sticker { font-size: clamp(34px, 10vw, 54px); padding: 12px 18px; background: var(--me); animation: wobble 3s ease-in-out infinite; }
+.dots span { display: inline-block; width: 12px; height: 12px; background: var(--ink); margin-right: 8px; animation: bounce 1s infinite; }
+.dots span:nth-child(2) { animation-delay: .15s; } .dots span:nth-child(3) { animation-delay: .3s; }
+.row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 20px; }
+.row:last-child { border-bottom: 0; }
+.row i { width: 18px; height: 18px; flex: none; border: 2px solid var(--ink); }
+.row .sbar { height: 14px; flex: 1; transform-origin: left; animation: grow .8s cubic-bezier(.2,.9,.2,1) both; }
+.row .pts { font-family: "Plex", monospace; font-size: 16px; min-width: 46px; text-align: right; }
+.row .gain { color: var(--pink); font-family: "Plex", monospace; font-size: 13px; min-width: 48px; text-align: right; }
+.stamp { display: inline-block; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 18px; padding: 4px 10px; transform: rotate(-3deg); margin-bottom: -4px; position: relative; z-index: 1; }
+.stamp.top { background: var(--pink); color: #fff; }
+.place { font-weight: 800; font-size: 120px; line-height: .9; letter-spacing: -.05em; }
+.opt { display: block; width: 100%; padding: 0; background: none; border: 0; box-shadow: none; margin: 0 0 22px; text-align: left; color: var(--ink); font: inherit; }
+.opt:active { transform: scale(.98); box-shadow: none; }
+.optxt { display: block; text-align: left; font: 700 19px/1.25 "Brico", system-ui, sans-serif; background: var(--white); color: var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 0 0 14px; }
+.optxt small { display: block; font: 12px "Plex", monospace; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
+
+/* animation */
+@keyframes slap { from { transform: scale(1.3) rotate(var(--r, -1deg)); opacity: 0; } 60% { opacity: 1; } to { transform: scale(1) rotate(var(--r, -1deg)); opacity: 1; } }
+@keyframes drop { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes wobble { 0%, 100% { transform: rotate(2deg); } 50% { transform: rotate(-2deg) scale(1.03); } }
+@keyframes bounce { 0%, 100% { transform: none; } 40% { transform: translateY(-8px); } }
+@keyframes grow { from { transform: scaleX(0); } }
+.in > * { animation: drop .35s cubic-bezier(.2,.9,.2,1) both; }
+.in > *:nth-child(2) { animation-delay: .05s; } .in > *:nth-child(3) { animation-delay: .1s; } .in > *:nth-child(4) { animation-delay: .15s; }
+.in > *:nth-child(5) { animation-delay: .2s; } .in > *:nth-child(n+6) { animation-delay: .25s; }
+.slap { animation: slap .4s cubic-bezier(.2,1.4,.4,1) both !important; }
 
 /* fake internet posts: same layouts as the big screen */
-.post { background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 14px; margin: 6px 0 22px; transform: rotate(-.8deg); text-align: left; }
-.post h3 { font-weight: 800; font-size: 25px; line-height: 1.02; letter-spacing: -.02em; margin: 6px 0; }
-.post p { font-size: 17px; font-weight: 500; line-height: 1.25; }
-.post .mono { font-size: 10px; }
+.post { --r: -1deg; background: var(--white); border: 3px solid var(--ink); box-shadow: 7px 7px 0 var(--ink); margin: 6px 0 24px; transform: rotate(var(--r)); text-align: left; overflow: hidden; }
+.post .pad { padding: 16px; }
+.post .bar { background: var(--ink); color: var(--paper); padding: 8px 16px; font: 11px "Plex", monospace; text-transform: uppercase; letter-spacing: .08em; }
+.post h3 { font-weight: 800; font-size: 29px; line-height: 1.02; letter-spacing: -.025em; margin: 4px 0 10px; }
+.post .a { font-size: 23px; font-weight: 600; line-height: 1.2; }
+.post .who { font: 800 17px "Brico", system-ui, sans-serif; display: block; margin-bottom: 2px; }
+.post .lbl { font: 12px "Plex", monospace; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; opacity: .75; }
 .post.stage1 .an { visibility: hidden; }
-.mast { display: flex; gap: 10px; align-items: baseline; border-bottom: 3px solid var(--ink); padding-bottom: 6px; }
-.mast b { font-weight: 800; font-size: 18px; }
-.thumb { background: var(--ink); color: #fff; padding: 12px; min-height: 120px; margin-bottom: 8px; }
-.prog { display: block; height: 4px; width: 40%; background: var(--pink); margin: 8px 0; }
-.cm { display: flex; gap: 10px; margin-top: 6px; } .av { width: 30px; height: 30px; flex: none; }
-.stars { display: flex; gap: 3px; align-items: center; } .stars i { width: 15px; height: 15px; border: 2px solid var(--ink); } .stars i:first-child { background: var(--yellow); }
-.stars .mono { margin-left: 8px; }
-.p-dating { background: var(--pink); color: #fff; } .p-dating h3 { color: var(--ink); }
-.bar { border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 8px; margin-bottom: 8px; }
-.p-chat { background: #DCE3EE; padding: 0 0 12px; } .p-chat .head { background: var(--blue); color: #fff; padding: 12px; }
-.bubble { background: #fff; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); margin: 12px 12px 0; padding: 10px; width: 82%; }
-.p-classified { background: var(--yellow); } .p-classified hr { border: 0; border-top: 3px solid var(--ink); margin: 8px 0; }
-.p-poster { background: var(--ink); color: var(--paper); text-align: center; padding: 26px 16px; } .p-poster h3 { font-size: 34px; text-transform: uppercase; }
+.post.stage2 .an { animation: drop .4s cubic-bezier(.2,.9,.2,1) both; }
+.qa { padding: 12px 16px; border-top: 2px dashed rgba(27,26,23,.35); }
+.bar + .qa { border-top: 0; }
+.p-police { background: #F4F1EA; }
+.p-job .bar { background: var(--blue); color: #fff; }
+.p-forum .bar { background: #1F9E6E; color: #fff; }
+.p-lastwords { background: var(--ink); color: var(--paper); } .p-lastwords .bar { background: var(--pink); color: #fff; }
+.p-lastwords h3 { color: var(--yellow); }
+.p-lastwords .a { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+.mast { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; border-bottom: 3px solid var(--ink); padding-bottom: 6px; margin-bottom: 6px; }
+.mast b { font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
+.p-headline h3 { font-size: 34px; }
+.thumb { background: var(--ink); color: #fff; padding: 16px; min-height: 130px; display: flex; flex-direction: column; justify-content: flex-end; }
+.prog { display: block; height: 5px; width: 40%; background: var(--pink); margin: 8px 0 6px; }
+.cm { display: flex; gap: 12px; }
+.av { width: 40px; height: 40px; flex: none; border: 2px solid var(--ink); }
+.stars { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; } .stars i { width: 18px; height: 18px; border: 2px solid var(--ink); } .stars i:first-child { background: var(--yellow); }
+.p-classified { background: var(--yellow); } .p-classified hr { border: 0; border-top: 3px solid var(--ink); margin: 10px 0; }
 textarea.slot {
-  display: block; width: 100%; min-height: 0; padding: 4px 6px; resize: none; overflow: hidden;
+  display: block; width: 100%; min-height: 0; padding: 6px 8px; resize: none; overflow: hidden; margin: 4px 0;
   font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit;
-  background: rgba(255,79,121,.10); border: 2px dashed currentColor;
+  background: rgba(255,79,121,.14); border: 3px dashed var(--pink); box-shadow: none !important;
+  animation: pulse 1.6s ease-in-out infinite;
 }
-textarea.slot::placeholder { color: inherit; opacity: .45; font-size: .7em; text-transform: none; letter-spacing: 0; }
-.hide { display: none !important; }
+@keyframes pulse { 50% { background: rgba(255,79,121,.28); } }
+textarea.slot:focus { animation: none; background: rgba(255,79,121,.08); }
+textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font-weight: 600; letter-spacing: 0; }
 </style>
 </head>
 <body>
+<div class="wrap">
 <header><div class="logo"><span>KONTEXT</span>LOS</div><div class="who" id="who"></div></header>
 <main id="app"></main>
+</div>
 <script>
 const $ = (s) => document.querySelector(s);
 const app = $("#app");
@@ -101,110 +150,138 @@ function connect(code, name, create = false) {
     const m = JSON.parse(e.data);
     if (m.t === "joined") {
       me = m; store.set("kl_pid_" + m.code, m.id); store.set("kl_name", m.name); store.set("kl_code", m.code);
-      $("#who").innerHTML = `Raum ${esc(m.code)}<b>${esc(m.name)}</b>`;
-      show({ s: "wait", title: "Du bist drin!", text: "Gleich geht's los." });
+      history.replaceState(null, "", "?code=" + m.code);
+      $("#who").innerHTML = `<span class="code">${esc(m.code)}</span><b>${esc(m.name)}</b>`;
     }
-    else if (m.t === "error") { me = null; joinScreen(m.msg); }
+    else if (m.t === "error") { me = null; startScreen(m.msg); }
     else if (m.t === "msg") show(m.d);
   };
   ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
 }
 const out = (d) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
+const screenHost = (code) => "host/" + (code ? "?code=" + encodeURIComponent(code) : "");
 
-function joinScreen(err) {
-  const q = new URLSearchParams(location.search);
+// One page for everyone: join, start a new room, or turn this device into the big screen.
+function startScreen(err) {
+  last = null;
+  const code0 = new URLSearchParams(location.search).get("code") || "";
+  app.className = "in";
   app.innerHTML = `
     ${err ? `<div class="err">${esc(err)}</div>` : ""}
-    <h1>Rein ins<br>Chaos.</h1>
-    <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" value="${esc(q.get("code") || store.get("kl_code") || "")}"></div>
-    <div class="field"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
+    <h1>Sag was<br>Harmloses.</h1>
+    <div><span class="sticker">Wir machen's schlimm.</span></div>
+    <div class="field" style="margin-top:28px"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
+    <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
     <button id="go">Mitspielen</button>
-    <p class="mono" style="margin:28px 0 6px">Kein großer Bildschirm da?</p>
-    <button id="new" style="background:#fff;color:var(--ink)">Neuen Raum erstellen</button>`;
-  $("#new").onclick = () => {
-    const name = $("#name").value.trim();
-    if (!name) return joinScreen("Erst deinen Namen eingeben.");
-    $("#new").disabled = true;
-    connect("", name, true);
-  };
+    <div class="or mono">oder</div>
+    <button id="new" class="ghost">Neuen Raum erstellen</button>
+    <a class="btn ghost small" id="screen" href="${screenHost(code0)}">Als großen Bildschirm öffnen (TV / Beamer)</a>`;
+  const codeIn = $("#code");
+  codeIn.oninput = () => { $("#screen").href = screenHost(codeIn.value.trim().toUpperCase()); };
   $("#go").onclick = () => {
-    const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
-    if (code.length !== 4 || !name) return joinScreen("Code (4 Buchstaben) und Name eingeben.");
+    const code = codeIn.value.trim().toUpperCase(), name = $("#name").value.trim();
+    if (!name) return startScreen("Erst deinen Namen eingeben.");
+    if (code.length !== 4) return startScreen("Der Raumcode hat 4 Buchstaben. Neuer Raum? Dann unten erstellen.");
     $("#go").disabled = true;
     connect(code, name);
+  };
+  $("#new").onclick = () => {
+    const name = $("#name").value.trim();
+    if (!name) return startScreen("Erst deinen Namen eingeben.");
+    $("#new").disabled = true;
+    connect("", name, true);
   };
 }
 
 // Timer bar + a hard end callback (setTimeout keeps working when rAF is paused).
 function timer(sec, onEnd) {
   cancelAnimationFrame(timerRAF); clearTimeout(endTimer);
-  const bar = $(".timer"); if (!sec) return;
+  const bar = $(".timer i"), num = $(".timer span"); if (!sec) return;
   const end = performance.now() + sec * 1000, total = sec * 1000;
-  const tick = () => { const left = Math.max(0, end - performance.now()); if (bar) bar.style.transform = `scaleX(${left / total})`; if (left > 0) timerRAF = requestAnimationFrame(tick); };
+  const tick = () => {
+    const left = Math.max(0, end - performance.now());
+    if (bar) bar.style.transform = `scaleX(${left / total})`;
+    if (num) num.textContent = Math.ceil(left / 1000) + " s";
+    if (left > 0) timerRAF = requestAnimationFrame(tick);
+  };
   tick();
   if (onEnd) endTimer = setTimeout(onEnd, sec * 1000);
 }
+const timerHTML = `<div class="timer"><i></i><span></span></div>`;
 
 // One fake internet post. edit=true turns the twist into a text field right where it will appear.
-function post(p, { edit = false, stage = 2, placeholder = "", max = 70 } = {}) {
+function post(p, { edit = false, stage = 2, placeholder = "", max = 70, r = -1 } = {}) {
   const tw = edit ? `<textarea class="slot" id="txt" rows="1" maxlength="${max}" placeholder="${esc(placeholder)}"></textarea>` : esc(p.twist);
   const a = esc(p.answer), who = esc(p.who), col = esc(p.color);
+  const name = `<span class="who" style="color:${col}">${who}</span>`;
   const body = {
-    headline: `<div class="mast"><b>Der Tagesbote</b><span class="mono">Ausgabe 214 · 1,80 €</span></div>
-      <h3>${tw}</h3><p class="an">„${a}“, sagt ${who}.</p>`,
+    police: `<div class="bar">Protokoll · Vernehmung · Az. 0815/26</div>
+      <div class="qa"><span class="lbl">Kommissarin</span><h3>${tw}</h3></div>
+      <div class="qa an"><span class="lbl">Verdächtige Person</span>${name}<p class="a">„${a}“</p></div>`,
+    job: `<div class="bar">Bewerbungsgespräch · Stelle: Filialleitung</div>
+      <div class="qa"><span class="lbl">Personalchef</span><h3>${tw}</h3></div>
+      <div class="qa an"><span class="lbl">Bewerber:in</span>${name}<p class="a">„${a}“</p></div>`,
+    forum: `<div class="bar">Hilfe-Forum › Alltag & Leben</div>
+      <div class="qa"><span class="lbl">Frage von anonym_1987</span><h3>${tw}</h3></div>
+      <div class="qa an"><span class="lbl">★ Hilfreichste Antwort</span>${name}<p class="a">${a}</p></div>`,
+    lastwords: `<div class="bar">Letzte Worte</div><div class="pad">
+      <span class="lbl" style="opacity:.85">Die letzten Worte von ${who}, kurz bevor</span><h3>${tw}</h3>
+      <p class="a an">„${a}“</p></div>`,
+    headline: `<div class="pad"><div class="mast"><b>Der Tagesbote</b><span class="mono">Sa., 1,80 €</span></div>
+      <h3>${tw}</h3><div class="an"><p class="a">„${a}“</p><span class="lbl" style="margin-top:6px">— ${who}, Augenzeug:in</span></div></div>`,
     video: `<div class="thumb"><h3>${tw}</h3><i class="prog"></i><span class="mono">12:47 · 2,1 Mio. Aufrufe</span></div>
-      <div class="an"><span class="mono">1.204 Kommentare</span><div class="cm"><i class="av" style="background:${col}"></i><div><span class="mono" style="color:${col}">@${who}</span><p>${a}</p></div></div></div>`,
-    review: `<span class="mono" style="color:var(--blue)">Kundenbewertung</span><h3>${tw}</h3>
-      <div class="an"><div class="stars"><i></i><i></i><i></i><i></i><i></i><span class="mono">1 von 5 · Verifizierter Kauf</span></div><p style="margin-top:6px">„${a}“</p><span class="mono">— ${who}, vor 3 Tagen</span></div>`,
-    dating: `<h3 style="color:#fff">${who}, 31 <span class="mono">0,4 km entfernt</span></h3><h3>${tw}</h3>
-      <div class="an"><span class="mono">Über mich</span><p>${a}</p></div>`,
-    search: `<div class="bar"><h3 style="margin:0">${tw}</h3></div>
-      <div class="an"><span class="mono">Ungefähr 3 Ergebnisse (0,41 s)</span><br><span class="mono" style="color:var(--blue)">Ratgeber-Forum › Beitrag von ${who}</span><p>„${a}“</p></div>`,
-    chat: `<div class="head"><h3 style="margin:0">${tw}</h3><span class="mono">6 Mitglieder</span></div>
-      <div class="bubble an"><span class="mono" style="color:${col}">${who}</span><p>${a}</p><span class="mono">23:47</span></div>`,
-    classified: `<span class="mono">Kleinanzeige · Nr. 0815</span><h3>Verkaufe: ${tw}</h3>
-      <div class="an"><p>${a}</p><hr><span class="mono">VB · Nur Abholung · Kontakt: ${who}</span></div>`,
-    poster: `<h3>${tw}</h3><div class="an"><p>${a}</p><span class="mono" style="color:var(--pink)">— ${who}</span></div>`,
+      <div class="pad an"><span class="lbl">Top-Kommentar</span><div class="cm"><i class="av" style="background:${col}"></i><div>${name}<p class="a">${a}</p></div></div></div>`,
+    review: `<div class="pad"><span class="lbl" style="color:var(--blue)">Kundenbewertung zu</span><h3>${tw}</h3>
+      <div class="an"><div class="stars"><i></i><i></i><i></i><i></i><i></i><span class="mono" style="margin-left:6px">1 von 5</span></div>${name}<p class="a">„${a}“</p></div></div>`,
+    classified: `<div class="pad"><span class="lbl">Kleinanzeige · Nr. 0815</span><h3>Verkaufe: ${tw}</h3>
+      <div class="an"><p class="a">${a}</p><hr><span class="lbl">VB · Nur Abholung · Kontakt: ${who}</span></div></div>`,
   }[p.f] || "";
-  const origin = stage >= 3 ? `<div class="card quote"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div>` : "";
-  return `<div class="post p-${esc(p.f)} stage${stage}">${body}</div>${origin}`;
+  const origin = stage >= 3 && p.prompt ? `<div class="card prompt slap" style="--r:1.2deg"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div>` : "";
+  return `<div class="post p-${esc(p.f)} stage${stage}" style="--r:${r}deg">${body}</div>${origin}`;
 }
 
 function waitScreen(title, text) { show({ s: "wait", title, text }); }
+const tilt = (i) => [-1.4, 1.1, -0.7, 1.6, -1.8, 0.8][i % 6];
 
 function show(d) {
   // ignore duplicate state resends so typing isn't wiped
   const sig = JSON.stringify(d);
   if (sig === last) return;
+  const prev = last ? JSON.parse(last) : {};
   last = sig;
   cancelAnimationFrame(timerRAF); clearTimeout(endTimer);
   if (d.color) document.documentElement.style.setProperty("--me", d.color);
+  app.className = "in";
 
   if (d.s === "lobby") {
-    const mode = d.phoneMode ? "Handy-Modus: Ihr seht alles auch hier." : "Bildschirm-Modus: Die Auflösung läuft vorne.";
-    app.innerHTML = `<p class="mono">Raum ${esc(me?.code)} · ${mode}</p><h1>${d.count} von 8<br>sind da.</h1>
-      ${d.vip ? `<div class="card"><p>Du bist <b>Boss</b> dieser Runde. Starte, sobald alle drin sind (mind. 3).</p></div>
-      <button id="start" ${d.count < 3 ? "disabled" : ""}>Alle da — los!</button>` : `<div class="card"><p>Gleich geht's los. Der Boss startet das Spiel.</p></div>`}`;
-    if (!d.hasHost || d.phoneMode) {
-      app.insertAdjacentHTML("beforeend", `<div class="card quote" style="margin-top:26px"><span class="mono">Zum Mitspielen: Code ${esc(d.code)}</span><div class="q" style="font-size:16px;word-break:break-all">${esc(d.link)}</div></div><button id="share" style="background:#fff;color:var(--ink)">Link teilen</button>`);
-      $("#share").onclick = async () => {
-        try { if (navigator.share) await navigator.share({ title: "KONTEXTLOS", url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Kopiert!"; } }
-        catch (e) { if (e.name !== "AbortError") $("#share").textContent = "Link oben markieren & kopieren"; } // share/clipboard need https
-      };
-    }
-    if (d.vip) {
-      app.insertAdjacentHTML("beforeend", `<button id="origin" style="background:#fff;color:var(--ink)">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`);
-      $("#origin").onclick = () => out({ a: "origin", on: !d.showOrigin });
-      $("#start").onclick = () => out({ a: "start" });
-    }
+    const can = d.count >= d.min;
+    const known = prev.s === "lobby" ? new Set((prev.players || []).map((p) => p.name)) : new Set();
+    const chips = d.players.map((p, i) => `<span class="chip ${known.has(p.name) ? "" : "slap"}" style="background:${esc(p.color)};--r:${tilt(i)}deg;transform:rotate(${tilt(i)}deg)"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("");
+    if (prev.s === "lobby") app.className = ""; // only new chips animate
+    app.innerHTML = `<p class="mono">Raumcode</p><div><span class="bigcode">${esc(d.code)}</span></div>
+      <p class="mono">${d.count} von max. ${d.max} dabei · ${d.phoneMode ? "Auflösung auf allen Handys" : "Auflösung auf dem großen Bildschirm"}</p>
+      <div class="chips">${chips}</div>
+      ${d.vip ? `<button id="start" ${can ? "" : "disabled"}>${can ? "Alle da — los!" : `Noch ${d.min - d.count} fehlt`}</button>
+        <button id="origin" class="ghost small">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`
+        : `<div class="card"><p>Gleich geht's los. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
+      <div class="or mono">Leute einladen</div>
+      <button id="share" class="ghost small">Link teilen</button>
+      ${d.hasHost ? "" : `<a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
+    if (d.vip) { $("#start").onclick = () => out({ a: "start" }); $("#origin").onclick = () => out({ a: "origin", on: !d.showOrigin }); }
+    $("#share").onclick = async () => {
+      try { if (navigator.share) await navigator.share({ title: "KONTEXTLOS", text: "Spiel mit! Raumcode " + d.code, url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
+      catch (e) { if (e.name !== "AbortError") $("#share").textContent = d.link; } // share/clipboard need https
+    };
 
   } else if (d.s === "write") {
     if (sentKey === d.key) return waitScreen("Abgeschickt.", "Warte auf die anderen …");
     const max = d.max || 80;
     app.innerHTML = d.post
-      ? `<p class="mono">${esc(d.tag)}</p><div class="timer"></div>${post(d.post, { edit: true, placeholder: d.placeholder, max })}
+      ? `<p class="mono">${esc(d.tag)}</p><h2>Gib dem Ganzen einen neuen Kontext.</h2>${timerHTML}
+         <div class="slap">${post(d.post, { edit: true, placeholder: d.placeholder, max })}</div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`
-      : `<p class="mono">${esc(d.tag)}</p><h2>${esc(d.title)}</h2><div class="timer"></div>
+      : `<p class="mono">${esc(d.tag)}</p>${timerHTML}
+         <div class="card prompt slap" style="--r:-1.2deg"><span class="mono">Ehrliche Frage</span><div class="q">${esc(d.title)}</div></div>
          <div class="field"><textarea id="txt" maxlength="${max}" placeholder="${esc(d.placeholder || "")}"></textarea></div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`;
     const t = $("#txt");
@@ -213,43 +290,51 @@ function show(d) {
     grow();
     const submit = () => { sentKey = d.key; out({ a: "submit", key: d.key, text: t.value.trim() }); waitScreen("Abgeschickt.", "Warte auf die anderen …"); };
     $("#send").onclick = () => { if (!t.value.trim()) return t.focus(); submit(); };
-    // time's up: send whatever is typed (the screen fills in a fallback if it's empty)
+    // time's up: send whatever is typed (the game fills in a fallback if it's empty)
     timer(d.seconds, () => { if (sentKey !== d.key) { t.blur(); submit(); waitScreen("Zeit um!", "Dein Text wurde abgeschickt."); } });
 
   } else if (d.s === "vote") {
     if (sentKey === d.key) return waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …");
-    app.innerHTML = `<p class="mono">Abstimmung</p><h2>${esc(d.title)}</h2><div class="timer"></div>` +
-      d.options.map((o) => d.full && o.post
-        ? `<button class="opt full" data-i="${o.i}">${post(o.post)}</button>`
-        : `<button class="opt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
-    app.querySelectorAll(".opt").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …"); });
+    app.innerHTML = `<p class="mono">Abstimmung</p><h2>${esc(d.title)}</h2>${timerHTML}` +
+      d.options.map((o, i) => d.full && o.post
+        ? `<button class="opt" data-i="${o.i}">${post(o.post, { r: tilt(i) })}</button>`
+        : `<button class="optxt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
+    app.querySelectorAll("[data-i]").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …"); });
     timer(d.seconds);
 
   } else if (d.s === "reveal") {
-    app.innerHTML = `<p class="mono">${esc(d.tag)}</p>${post(d.post, { stage: d.stage })}`;
+    const same = prev.s === "reveal" && prev.tag === d.tag; // stage change: keep the card still, let the answer drop in
+    if (same) app.className = "";
+    app.innerHTML = `<p class="mono">${esc(d.tag)}</p><div class="${same ? "" : "slap"}" style="margin-top:14px">${post(d.post, { stage: d.stage })}</div>`;
 
   } else if (d.s === "results") {
-    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + d.items.map((it) =>
-      `<div class="row" style="border:0;padding:0 0 4px"><span class="mono" style="background:var(--ink);color:var(--paper);padding:3px 6px">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"}</span><span class="mono">verdreht von <b>${esc(it.post.twister)}</b></span></div>${post(it.post)}`).join("");
+    const top = Math.max(...d.items.map((it) => it.votes));
+    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + d.items.map((it, i) =>
+      `<div><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${post(it.post, { r: tilt(i) })}</div>`).join("");
 
   } else if (d.s === "scores") {
+    const best = Math.max(1, ...d.rows.map((r) => r.score));
     app.innerHTML = `<p class="mono">Punktestand</p><h1>${esc(d.title)}</h1>
-      <div class="card">${d.rows.map((r, i) => `<div class="row"><span class="mono">${i + 1}</span><i style="background:${esc(r.color)}"></i>${esc(r.name)}
-        <span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
+      ${d.gain > 0 ? `<div><span class="sticker">+${d.gain} für dich</span></div>` : ""}
+      <div class="card" style="margin-top:22px">${d.rows.map((r) => `<div class="row"><i style="background:${esc(r.color)}"></i><span style="min-width:90px">${esc(r.name)}</span>
+        <span class="sbar" style="background:${esc(r.color)};max-width:${Math.max(4, 100 * r.score / best)}%"></span><span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
 
   } else if (d.s === "end") {
-    app.innerHTML = `<p class="mono">Ende</p><div class="big">#${d.place}</div><h2>${esc(d.text)}</h2>
-      ${d.vip ? `<button id="again">Nochmal spielen</button>` : ""}`;
+    app.innerHTML = `<div class="wait"><p class="mono">Ende</p><div class="place slap">#${d.place}</div>
+      <span class="sticker">${d.place === 1 ? "Du gewinnst!" : esc(d.text)}</span>
+      ${d.place === 1 ? `<p>${esc(d.text)}</p>` : ""}
+      ${d.vip ? `<button id="again" style="margin-top:20px">Nochmal spielen</button>` : ""}</div>`;
     if (d.vip) $("#again").onclick = () => out({ a: "restart" });
 
   } else {
-    app.innerHTML = `<h1>${esc(d.title || "Augen nach vorn.")}</h1><p>${esc(d.text || "")}</p>`;
+    app.innerHTML = `<div class="wait"><div class="slap"><span class="sticker">${esc(d.title || "Augen nach vorn.")}</span></div>
+      <p>${esc(d.text || "")}</p><div class="dots"><span></span><span></span><span></span></div></div>`;
   }
 }
 
-joinScreen();
-const q = new URLSearchParams(location.search);
-if (q.get("code") && store.get("kl_pid_" + q.get("code").toUpperCase())) connect(q.get("code").toUpperCase(), store.get("kl_name") || "");
+startScreen();
+const q0 = new URLSearchParams(location.search).get("code");
+if (q0 && store.get("kl_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("kl_name") || "");
 </script>
 </body>
 </html>

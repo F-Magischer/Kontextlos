@@ -1,6 +1,6 @@
 # KONTEXTLOS — Game Design
 
-Party-Spiel für 3–8 Leute. Ein Bildschirm (Laptop/TV) zeigt das Spiel, alle spielen mit dem Handy im Browser. Inspiriert vom *Genre* von Jackbox' "Survive the Internet" (harmlose Antwort → wird von jemand anderem aus dem Kontext gerissen), aber mit eigenem Ablauf, Formaten, Look und Punkte-System.
+Party-Spiel für 2–20 Leute. Ein Bildschirm (Laptop/TV) zeigt das Spiel, alle spielen mit dem Handy im Browser. Inspiriert vom *Genre* von Jackbox' "Survive the Internet" (harmlose Antwort → wird von jemand anderem aus dem Kontext gerissen), aber mit eigenem Ablauf, Formaten, Look und Punkte-System.
 
 ## Kernschleife (pro Runde)
 
@@ -22,8 +22,9 @@ Zuordnung: Spieler werden gemischt und im Kreis verbunden (jede:r verdreht genau
 
 ## Formate (eigene Erfindungen, keine echten Marken)
 
-Schlagzeile · Kommentar unter Video · Produktbewertung · Dating-Profil · Suchverlauf · Gruppenchat-Nachricht · Kleinanzeige · Motivationsposter.
-Jedes Format hat ein eigenes Layout auf dem Bildschirm, damit jede Enthüllung wie ein neuer "Fund" wirkt.
+Der Twist ist immer die Vorlage, die ehrliche Antwort die Pointe. Am stärksten sind die Frage-Antwort-Formate, weil der Verdreher der Antwort eine neue Frage gibt:
+Polizeiverhör · Bewerbungsgespräch · Hilfe-Forum · Letzte Worte („… kurz bevor ___“) · Schlagzeile · Videokommentar · 1-Stern-Bewertung · Kleinanzeige.
+Name der Person steht immer groß und in ihrer Farbe direkt über ihrer Antwort.
 
 ## Art Direction: "Risograph-Zine"
 

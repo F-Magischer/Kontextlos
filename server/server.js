@@ -85,6 +85,8 @@ wss.on("connection", (ws) => {
     if (!role && m.t === "host") {
       const existing = typeof m.code === "string" && rooms.get(m.code);
       room = existing && !existing.host ? existing : newRoom();
+      // a big screen joining a room in the lobby takes over the reveal; it can switch back to phones
+      if (existing && room === existing && room.phase === "lobby") room.phoneMode = false;
       room.host = ws; role = "host";
       clearTimeout(room.cleanup);
       send(ws, { t: "room", code: room.code, url: room.link });
@@ -131,6 +133,7 @@ wss.on("connection", (ws) => {
       if (p && p.ws === ws) { p.ws = null; G.leave(room, pid); }
     } else if (role === "host" && room.host === ws) {
       room.host = null; // the game keeps running; a reloaded screen reclaims the room
+      if (room.phase === "lobby") room.phoneMode = true; // no screen left: show everything on phones
       if (room.phase === "lobby") G.pushLobby(room);
     }
     maybeCleanup(room);

@@ -36,7 +36,8 @@ server.stdout.once("data", () => {
 });
 
 function startBots(hostCode) {
-  const names = ["Ada", "Bo", "Cem", "Dana"];
+  const N = Number(process.env.N) || 4; // N=2 … 20 players
+  const names = ["Ada", "Bo", "Cem", "Dana", ...Array.from({ length: 16 }, (_, i) => "Spieler" + (i + 5))].slice(0, N);
   const results = {};
   const seen = new Set();
   let code = hostCode;
@@ -59,6 +60,7 @@ function startBots(hostCode) {
       const d = m.d;
       seen.add(d.s);
       assert.equal(d.code, code, "every phone screen carries the room code");
+      if (d.s === "lobby") assert(d.players.length === d.count && d.min === 2 && d.max === 20, "lobby lists players");
       if (d.s === "lobby" && d.vip && d.count === names.length) setTimeout(() => out({ a: "start" }), SLOW);
       if (d.s === "write" && d.key[0] === "t") assert(d.post && d.post.answer && !d.post.prompt && !d.post.twist, "twist screen shows the post but not the question");
       if (d.s === "reveal") assert([1, 2].includes(d.stage) && d.post.twist && !d.post.prompt && !d.post.twister, "reveal hides question (default) and twister");
@@ -66,15 +68,15 @@ function startBots(hostCode) {
       if (d.s === "results") assert(d.items.every((it) => it.post.twister && Number.isInteger(it.votes)), "results name the twister");
       // Dana stays silent in round 1 so the timeout + fallback path runs too
       if (d.s === "write" && !(name === "Dana" && d.key === "a1" && !SLOW))
-        out({ a: "submit", key: d.key, text: (d.key[0] === "a" ? ANSWERS : TWISTS)[(n + Number(d.key.slice(1))) % 4] });
+        out({ a: "submit", key: d.key, text: (d.key[0] === "a" ? ANSWERS : TWISTS)[(n + Number(d.key.slice(1))) % 4] + (n > 3 ? " " + n : "") });
       if (d.s === "vote") {
-        assert(d.options.length >= 2, "vote needs at least 2 options");
+        assert(d.options.length >= 1 && d.options.length === names.length - 1, "vote: every post except your own twist");
         setTimeout(() => out({ a: "vote", key: d.key, i: d.options[0].i }), SLOW);
       }
       if (d.s === "end") {
         results[name] = d;
         if (Object.keys(results).length === names.length) {
-          assert.deepEqual(Object.values(results).map((r) => r.place).sort(), [1, 2, 3, 4]);
+          assert.deepEqual(Object.values(results).map((r) => r.place).sort((a, b) => a - b), names.map((_, i) => i + 1));
           assert(Object.values(results).some((r) => parseInt(r.text) > 0), "someone scored");
           const need = ["lobby", "write", "vote", "wait", ...(hostCode ? [] : ["reveal", "results", "scores", "dup-refused"])];
           for (const s of need) assert(seen.has(s), "missing " + s);

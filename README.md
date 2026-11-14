@@ -1,9 +1,9 @@
 # KONTEXTLOS
 
-Party-Spiel für 3–8 Leute im Browser. Sag was Harmloses — die anderen machen's schlimm.
+Party-Spiel für 2–20 Leute im Browser. Sag was Harmloses — die anderen machen's schlimm.
 Design & Art Direction: siehe [DESIGN.md](DESIGN.md).
 
-**Live:** https://kontextlos.onrender.com (Handys) · https://kontextlos.onrender.com/host/ (großer Bildschirm)
+**Live:** https://kontextlos.onrender.com — eine Startseite für alle: mitspielen, Raum erstellen oder das Gerät als großen Bildschirm (TV/Beamer) öffnen.
 Gehostet auf Render (free, Frankfurt), deployt automatisch bei jedem Push auf `main`.
 
 ```
