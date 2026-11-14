@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EFE7D6">
+<title>KONTEXTLOS</title>
+<style>
+@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; }
+@font-face { font-family: "Plex"; src: url("fonts/IBMPlexMono-Medium.ttf"); }
+:root { --paper:#EFE7D6; --ink:#1B1A17; --pink:#FF4F79; --blue:#2B59C3; --yellow:#FFD23F; --me:var(--pink); }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--paper); color: var(--ink); min-height: 100%; }
+body {
+  font-family: "Brico", system-ui, sans-serif; font-stretch: 85%;
+  background-image: radial-gradient(rgba(27,26,23,.13) 1px, transparent 1.2px); background-size: 7px 7px;
+  padding: max(16px, env(safe-area-inset-top)) 16px 32px; -webkit-tap-highlight-color: transparent;
+}
+header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 22px; }
+.logo { font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
+.logo span { background: var(--ink); color: var(--paper); padding: 0 4px; }
+.who { font-family: "Plex", monospace; font-size: 13px; text-transform: uppercase; }
+.who b { background: var(--me); color: #fff; padding: 2px 6px; }
+.mono { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+h1 { font-weight: 800; font-size: 34px; line-height: .95; letter-spacing: -.03em; margin: 6px 0 14px; }
+h2 { font-weight: 700; font-size: 22px; line-height: 1.05; letter-spacing: -.01em; margin: 6px 0 12px; }
+p { font-size: 17px; line-height: 1.35; }
+.card { background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 14px; margin: 8px 0 22px; }
+.quote { background: var(--yellow); transform: rotate(-1.2deg); }
+.quote .q { font-size: 21px; font-weight: 700; line-height: 1.15; margin-top: 4px; }
+label { display: block; margin-bottom: 6px; }
+input, textarea {
+  width: 100%; font: 600 20px "Brico", system-ui, sans-serif; color: var(--ink);
+  border: 3px solid var(--ink); background: #fff; padding: 12px; border-radius: 0; outline: none;
+}
+input:focus, textarea:focus { box-shadow: 4px 4px 0 var(--me); }
+textarea { min-height: 120px; resize: none; }
+input#code { text-transform: uppercase; letter-spacing: .3em; font-family: "Plex", monospace; }
+.field { margin-bottom: 16px; }
+.count { text-align: right; margin-top: 4px; }
+button {
+  width: 100%; font: 800 22px "Brico", system-ui, sans-serif; letter-spacing: -.01em;
+  background: var(--ink); color: var(--paper); border: 3px solid var(--ink); padding: 16px;
+  box-shadow: 5px 5px 0 var(--me); cursor: pointer; border-radius: 0; margin-top: 6px;
+}
+button:active { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--me); }
+button:disabled { opacity: .35; }
+.opt { display: block; text-align: left; font: 600 18px/1.25 "Brico", system-ui, sans-serif; background: #fff; color: var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 0 0 14px; }
+.opt small { display: block; font: 12px "Plex", monospace; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
+.opt.sel { background: var(--me); color: #fff; }
+.opt.sel small { color: #fff; }
+.err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; }
+.big { font-size: 64px; font-weight: 800; line-height: 1; }
+.timer { height: 8px; background: var(--ink); margin: -14px 0 18px; transform-origin: left; }
+.hide { display: none !important; }
+</style>
+</head>
+<body>
+<header><div class="logo"><span>KONTEXT</span>LOS</div><div class="who" id="who"></div></header>
+<main id="app"></main>
+<script>
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+let ws, me = null, last = null, sentKey = null, timerRAF = 0;
+
+function connect(code, name) {
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+  ws.onopen = () => ws.send(JSON.stringify({ t: "join", code, name, pid: store.get("kl_pid_" + code) }));
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === "joined") { me = m; store.set("kl_pid_" + m.code, m.id); store.set("kl_name", m.name); store.set("kl_code", m.code); $("#who").innerHTML = `<b>${esc(m.name)}</b>`; show({ s: "wait", title: "Du bist drin!", text: "Schau auf den großen Bildschirm." }); }
+    else if (m.t === "error") { me = null; joinScreen(m.msg); }
+    else if (m.t === "hostgone") show({ s: "wait", title: "Verbindung weg", text: "Der Bildschirm ist offline. Warte kurz …" });
+    else if (m.t === "msg") show(m.d);
+  };
+  ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
+}
+const out = (d) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
+
+function joinScreen(err) {
+  const q = new URLSearchParams(location.search);
+  app.innerHTML = `
+    ${err ? `<div class="err">${esc(err)}</div>` : ""}
+    <h1>Rein ins<br>Chaos.</h1>
+    <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" value="${esc(q.get("code") || store.get("kl_code") || "")}"></div>
+    <div class="field"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
+    <button id="go">Mitspielen</button>`;
+  $("#go").onclick = () => {
+    const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
+    if (code.length !== 4 || !name) return joinScreen("Code (4 Buchstaben) und Name eingeben.");
+    $("#go").disabled = true;
+    connect(code, name);
+  };
+}
+
+function timerBar(sec) {
+  cancelAnimationFrame(timerRAF);
+  const bar = $(".timer"); if (!bar || !sec) return;
+  const end = performance.now() + sec * 1000, total = sec * 1000;
+  const tick = () => { const left = Math.max(0, end - performance.now()); bar.style.transform = `scaleX(${left / total})`; if (left > 0) timerRAF = requestAnimationFrame(tick); };
+  tick();
+}
+
+function show(d) {
+  // ignore duplicate state resends so typing isn't wiped
+  const sig = JSON.stringify(d);
+  if (sig === last) return;
+  last = sig;
+  if (d.color) document.documentElement.style.setProperty("--me", d.color);
+  if (d.s === "lobby") {
+    app.innerHTML = `<p class="mono">Raum ${esc(me?.code)}</p><h1>${d.count} von 8<br>sind da.</h1>
+      ${d.vip ? `<div class="card"><p>Du bist <b>Boss</b> dieser Runde. Starte, sobald alle drin sind (mind. 3).</p></div>
+      <button id="start" ${d.count < 3 ? "disabled" : ""}>Alle da — los!</button>` : `<div class="card"><p>Gleich geht's los. Der Boss startet das Spiel.</p></div>`}`;
+    if (d.vip) $("#start").onclick = () => out({ a: "start" });
+  } else if (d.s === "write") {
+    if (sentKey === d.key) return show({ s: "wait", title: "Abgeschickt.", text: "Warte auf die anderen …" });
+    app.innerHTML = `<p class="mono">${esc(d.tag)}</p><h2>${esc(d.title)}</h2><div class="timer"></div>
+      ${d.quote ? `<div class="card quote"><span class="mono">${esc(d.quoteLabel)}</span><div class="q">„${esc(d.quote)}"</div></div>` : ""}
+      <div class="field"><label class="mono" for="txt">${esc(d.label)}</label><textarea id="txt" maxlength="${d.max || 80}" placeholder="${esc(d.placeholder || "")}"></textarea><div class="count mono" id="cnt">0/${d.max || 80}</div></div>
+      <button id="send">Abschicken</button>`;
+    const t = $("#txt");
+    t.oninput = () => { $("#cnt").textContent = `${t.value.length}/${d.max || 80}`; };
+    $("#send").onclick = () => { if (!t.value.trim()) return t.focus(); sentKey = d.key; out({ a: "submit", key: d.key, text: t.value.trim() }); show({ s: "wait", title: "Abgeschickt.", text: "Warte auf die anderen …" }); };
+    timerBar(d.seconds);
+  } else if (d.s === "vote") {
+    if (sentKey === d.key) return show({ s: "wait", title: "Stimme gezählt.", text: "Mal sehen, wer gewinnt …" });
+    app.innerHTML = `<p class="mono">Abstimmung</p><h2>${esc(d.title)}</h2><div class="timer"></div>` +
+      d.options.map((o) => `<button class="opt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
+    app.querySelectorAll(".opt").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); show({ s: "wait", title: "Stimme gezählt.", text: "Mal sehen, wer gewinnt …" }); });
+    timerBar(d.seconds);
+  } else if (d.s === "end") {
+    app.innerHTML = `<p class="mono">Ende</p><div class="big">#${d.place}</div><h2>${esc(d.text)}</h2>
+      ${d.vip ? `<button id="again">Nochmal spielen</button>` : ""}`;
+    if (d.vip) $("#again").onclick = () => out({ a: "restart" });
+  } else {
+    app.innerHTML = `<h1>${esc(d.title || "Augen nach vorn.")}</h1><p>${esc(d.text || "")}</p>`;
+  }
+}
+
+joinScreen();
+const q = new URLSearchParams(location.search);
+if (q.get("code") && store.get("kl_pid_" + q.get("code").toUpperCase())) connect(q.get("code").toUpperCase(), store.get("kl_name") || "");
+</script>
+</body>
+</html>
