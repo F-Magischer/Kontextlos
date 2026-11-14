@@ -2,3 +2,4 @@ node_modules/
 game/.godot/
 server/public/host/
 *.tmp
+dist/
