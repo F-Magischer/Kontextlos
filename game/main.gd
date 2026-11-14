@@ -456,6 +456,17 @@ func _tilt(i: int) -> float:
 	return [-2.2, 1.6, -1.1, 2.4, -1.8, 0.9, -2.6, 1.3][i % 8]
 
 
+## A 1920x1080 layer centred in the window, so layouts stay put at any aspect ratio.
+func _frame() -> Control:
+	var c := Control.new()
+	c.set_anchors_preset(Control.PRESET_CENTER)
+	c.offset_left = -W / 2; c.offset_right = W / 2
+	c.offset_top = -H / 2; c.offset_bottom = H / 2
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(c)
+	return c
+
+
 func _build_frame() -> void:
 	var bg := ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -464,26 +475,17 @@ func _build_frame() -> void:
 	bg.material = mat
 	add_child(bg)
 
-	# riso "tape" strips peeking in from the corners
+	# riso "tape" strips peeking in from the corners of the 16:9 frame
+	var deco := _frame()
 	for t in [[PINK, Vector2(-160, 1110), -24.0], [BLUE, Vector2(1580, 1120), -24.0]]:
 		var tape := _rect(t[0], Vector2(520, 70))
 		tape.position = t[1]
 		tape.rotation_degrees = t[2]
 		tape.modulate.a = 0.9
-		add_child(tape)
+		deco.add_child(tape)
 
-	stage = Control.new()
-	stage.set_anchors_preset(Control.PRESET_CENTER)
-	stage.offset_left = -W / 2; stage.offset_right = W / 2
-	stage.offset_top = -H / 2; stage.offset_bottom = H / 2
-	add_child(stage)
-
-	var hud := Control.new()
-	hud.set_anchors_preset(Control.PRESET_CENTER)
-	hud.offset_left = -W / 2; hud.offset_right = W / 2
-	hud.offset_top = -H / 2; hud.offset_bottom = H / 2
-	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(hud)
+	stage = _frame()
+	var hud := _frame()
 
 	var kon := _box(INK, 10, 0, 0)
 	kon.add_child(_label("KONTEXT", 40, PAPER, f_black))
