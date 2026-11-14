@@ -1,17 +1,14 @@
 # Render blueprint: one always-on Node web service (WebSockets + static files).
+# The public address comes from RENDER_EXTERNAL_URL; set PUBLIC_URL only for a custom domain.
 services:
   - type: web
     name: kontextlos
     runtime: node
     plan: free
-    rootDir: server
-    buildCommand: npm ci
-    startCommand: npm start
+    region: frankfurt
+    buildCommand: cd server && npm ci
+    startCommand: cd server && npm start
     healthCheckPath: /
     envVars:
-      - key: PUBLIC_URL
-        value: https://finn.lnny.dev
       - key: NODE_VERSION
         value: "22"
-    domains:
-      - finn.lnny.dev

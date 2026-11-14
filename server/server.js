@@ -14,7 +14,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/cs
   ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
 
 function lanUrl() {
-  if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL.replace(/\/$/, "");
+  // PUBLIC_URL wins; Render sets RENDER_EXTERNAL_URL (https://<name>.onrender.com) on its own
+  const pub = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+  if (pub) return pub.replace(/\/$/, "");
   for (const list of Object.values(os.networkInterfaces()))
     for (const a of list) if (a.family === "IPv4" && !a.internal) return `http://${a.address}:${PORT}`;
   return `http://localhost:${PORT}`;
