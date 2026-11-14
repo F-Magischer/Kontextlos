@@ -61,7 +61,9 @@ function startBots(hostCode) {
       assert.equal(d.code, code, "every phone screen carries the room code");
       if (d.s === "lobby" && d.vip && d.count === names.length) setTimeout(() => out({ a: "start" }), SLOW);
       if (d.s === "write" && d.key[0] === "t") assert(d.post && d.post.answer && !d.post.prompt && !d.post.twist, "twist screen shows the post but not the question");
-      if (d.s === "reveal") assert([1, 2, 3].includes(d.stage) && d.post.twist, "reveal stage");
+      if (d.s === "reveal") assert([1, 2].includes(d.stage) && d.post.twist && !d.post.prompt && !d.post.twister, "reveal hides question (default) and twister");
+      if (d.s === "vote") assert(d.options.every((o) => !o.post.twister), "vote must not reveal the twister");
+      if (d.s === "results") assert(d.items.every((it) => it.post.twister && Number.isInteger(it.votes)), "results name the twister");
       // Dana stays silent in round 1 so the timeout + fallback path runs too
       if (d.s === "write" && !(name === "Dana" && d.key === "a1" && !SLOW))
         out({ a: "submit", key: d.key, text: (d.key[0] === "a" ? ANSWERS : TWISTS)[(n + Number(d.key.slice(1))) % 4] });
@@ -74,7 +76,7 @@ function startBots(hostCode) {
         if (Object.keys(results).length === names.length) {
           assert.deepEqual(Object.values(results).map((r) => r.place).sort(), [1, 2, 3, 4]);
           assert(Object.values(results).some((r) => parseInt(r.text) > 0), "someone scored");
-          const need = ["lobby", "write", "vote", "wait", ...(hostCode ? [] : ["reveal", "scores", "dup-refused"])];
+          const need = ["lobby", "write", "vote", "wait", ...(hostCode ? [] : ["reveal", "results", "scores", "dup-refused"])];
           for (const s of need) assert(seen.has(s), "missing " + s);
           console.log("PASS", hostCode ? "(Godot big screen)" : "(phones only)", Object.values(results).map((r) => r.text).join(", "));
           setTimeout(() => done(0), SLOW * 2);

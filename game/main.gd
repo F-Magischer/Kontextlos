@@ -349,15 +349,17 @@ func _draw_lobby() -> void:
 	var phone: bool = v.phoneMode
 	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy)
 	var mode := _button("Modus: Alle am Handy" if phone else "Modus: Großer Bildschirm", _on_mode, YELLOW)
+	var origin := _button("Original-Frage zeigen: %s" % ("an" if v.showOrigin else "aus"), _on_origin, WHITE)
 	var side := _col([
 		_mono("Scannen oder öffnen", 20),
 		_label(join_link.replace("http://", "").replace("https://", ""), 30, INK, f_mono),
 		copy,
 		_rect(Color.TRANSPARENT, Vector2(1, 8)),
 		mode,
+		origin,
 		_mono("Auflösung auch auf jedem Handy" if phone else "Auflösung nur hier auf dem Bildschirm", 16),
 	], 10)
-	_put(side, Vector2(700, 830), 0, 0, false)
+	_put(side, Vector2(700, 820), 0, 0, false)
 
 	for i in 8:
 		var center := Vector2(1240 + (i % 2) * 400, 300 + (i / 2) * 170)
@@ -444,7 +446,6 @@ func _draw_reveal() -> void:
 		var origin := _box(YELLOW, 22, 8)
 		origin.add_child(_col([_mono("Eigentlich gefragt war %s:" % p.who, 20), _label(p.prompt, 44, INK, f_black, 760)], 4))
 		_put(origin, Vector2(W / 2 + 330, 930), 3.0)
-		_put(_mono("Verdreht von %s" % p.twister, 24), Vector2(W / 2 - 520, 930), -2.0, 0.2)
 
 
 func _button(text: String, on_press: Callable, bg := INK) -> Button:
@@ -471,6 +472,10 @@ func _on_copy() -> void:
 	_render()
 	await get_tree().create_timer(2.0).timeout
 	if v.get("phase") == "lobby": _render()
+
+
+func _on_origin() -> void:
+	_send({"t": "origin", "on": not v.showOrigin})
 
 
 func _on_mode() -> void:
@@ -591,7 +596,9 @@ func _draw_board(counts: Array) -> void:
 		if results:
 			var c := int(counts[i])
 			var stamp := _box(PINK if c == top and c > 0 else WHITE, 12, 6, 3)
-			stamp.add_child(_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], 36, WHITE if c == top and c > 0 else INK, f_black))
+			var hot := c == top and c > 0
+			stamp.add_child(_col([_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], 36, WHITE if hot else INK, f_black),
+				_mono("verdreht von %s" % v.posts[i].twister, 18, WHITE if hot else INK)], 0))
 			_put(stamp, Vector2(x + 400 * s, y - 300 * s), 8.0, 0.3 + i * 0.12)
 
 

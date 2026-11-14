@@ -119,6 +119,7 @@ wss.on("connection", (ws) => {
 
     if (role === "player" && m.t === "msg") return G.onPlayer(room, pid, m.d);
     if (role === "host" && m.t === "mode" && room.phase === "lobby") return G.setMode(room, m.phone);
+    if (role === "host" && m.t === "origin" && room.phase === "lobby") return G.setOrigin(room, m.on);
   });
 
   ws.on("close", () => {

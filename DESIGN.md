@@ -8,9 +8,9 @@ Party-Spiel für 3–8 Leute. Ein Bildschirm (Laptop/TV) zeigt das Spiel, alle s
 |---|---|---|---|
 | 1. Ehrlich sein | 60 s | Jede:r beantwortet eine harmlose, persönliche Frage | Wer ist fertig? |
 | 2. Verdrehen | 75 s | Du siehst den fertigen Post (z. B. Videokommentar) mit der fremden Antwort darin und tippst direkt in das leere Feld (Videotitel, Schlagzeile …). Die Original-Frage siehst du nicht. | Wer ist fertig? |
-| 3. Enthüllung | ~13 s pro Post | (Handy-Modus: dasselbe) | Drei Takte: erst nur der Twist → dann fällt die Antwort rein → dann die harmlose Original-Frage |
+| 3. Enthüllung | ~9 s pro Post | (Handy-Modus: dasselbe) | Erst nur der Twist → dann fällt die Antwort rein. Die Original-Frage nur, wenn in der Lobby eingeschaltet. Wer verdreht hat, bleibt geheim. |
 | 4. Abstimmen | 30 s | Welcher Post ist am schlimmsten? (Eigene Verdrehung nicht wählbar) | Countdown |
-| 5. Punkte | — | — | Rangliste mit Bewegung |
+| 5. Auszählung & Punkte | — | (Handy-Modus: dasselbe) | Jetzt erst: wer welchen Post verdreht hat, dazu die Stimmen. Danach Rangliste. |
 
 Zuordnung: Spieler werden gemischt und im Kreis verbunden (jede:r verdreht genau eine Antwort, niemand die eigene).
 

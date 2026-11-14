@@ -166,7 +166,7 @@ function post(p, { edit = false, stage = 2, placeholder = "", max = 70 } = {}) {
       <div class="an"><p>${a}</p><hr><span class="mono">VB · Nur Abholung · Kontakt: ${who}</span></div>`,
     poster: `<h3>${tw}</h3><div class="an"><p>${a}</p><span class="mono" style="color:var(--pink)">— ${who}</span></div>`,
   }[p.f] || "";
-  const origin = stage >= 3 ? `<div class="card quote"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div><p class="mono">Verdreht von ${esc(p.twister)}</p>` : "";
+  const origin = stage >= 3 ? `<div class="card quote"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div>` : "";
   return `<div class="post p-${esc(p.f)} stage${stage}">${body}</div>${origin}`;
 }
 
@@ -192,7 +192,11 @@ function show(d) {
         catch (e) { if (e.name !== "AbortError") $("#share").textContent = "Link oben markieren & kopieren"; } // share/clipboard need https
       };
     }
-    if (d.vip) $("#start").onclick = () => out({ a: "start" });
+    if (d.vip) {
+      app.insertAdjacentHTML("beforeend", `<button id="origin" style="background:#fff;color:var(--ink)">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`);
+      $("#origin").onclick = () => out({ a: "origin", on: !d.showOrigin });
+      $("#start").onclick = () => out({ a: "start" });
+    }
 
   } else if (d.s === "write") {
     if (sentKey === d.key) return waitScreen("Abgeschickt.", "Warte auf die anderen …");
@@ -223,6 +227,10 @@ function show(d) {
 
   } else if (d.s === "reveal") {
     app.innerHTML = `<p class="mono">${esc(d.tag)}</p>${post(d.post, { stage: d.stage })}`;
+
+  } else if (d.s === "results") {
+    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + d.items.map((it) =>
+      `<div class="row" style="border:0;padding:0 0 4px"><span class="mono" style="background:var(--ink);color:var(--paper);padding:3px 6px">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"}</span><span class="mono">verdreht von <b>${esc(it.post.twister)}</b></span></div>${post(it.post)}`).join("");
 
   } else if (d.s === "scores") {
     app.innerHTML = `<p class="mono">Punktestand</p><h1>${esc(d.title)}</h1>
