@@ -305,7 +305,7 @@ func _build_frame() -> void:
 
 func _render() -> void:
 	var ph: String = v.get("phase", "")
-	hud_round.text = ("RUNDE %d/%d · PUNKTE ×%d" % [v.round, v.rounds, v.round]) if ph in ["answer", "twist", "reveal", "vote", "results", "scores"] else ""
+	hud_round.text = ("RUNDE %d/%d · PUNKTE ×%d" % [v.round, v.rounds, v.mult]) if ph in ["answer", "twist", "reveal", "vote", "results", "scores"] else ""
 	match ph:
 		"lobby": _draw_lobby()
 		"answer": _draw_writing("Sei ehrlich.", "Beantwortet eure Frage auf dem Handy. Ganz harmlos. Noch.", "aDone", "who", "aOnline")
@@ -350,17 +350,20 @@ func _draw_lobby() -> void:
 	var phone: bool = v.phoneMode
 	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy)
 	var mode := _button("Modus: Alle am Handy" if phone else "Modus: Großer Bildschirm", _on_mode, YELLOW)
-	var origin := _button("Original-Frage zeigen: %s" % ("an" if v.showOrigin else "aus"), _on_origin, WHITE)
+	var origin := _button("Original-Frage: %s" % ("an" if v.showOrigin else "aus"), _on_origin, WHITE, 24)
+	var rounds := _button("Runden: %d" % v.rounds, _on_rounds, WHITE, 24)
+	var same := _button("Vorlagen: %s" % ("gleich für alle" if v.sameFormat else "gemischt"), _on_same, WHITE, 24)
 	var side := _col([
 		_mono("Scannen oder öffnen", 20),
 		_label(join_link.replace("http://", "").replace("https://", ""), 30, INK, f_mono),
 		copy,
 		_rect(Color.TRANSPARENT, Vector2(1, 8)),
 		mode,
-		origin,
+		_row([rounds, origin], 12),
+		same,
 		_mono("Auflösung auch auf jedem Handy" if phone else "Auflösung nur hier auf dem Bildschirm", 16),
 	], 10)
-	_put(side, Vector2(700, 820), 0, 0, false)
+	_put(side, Vector2(700, 800), 0, 0, false)
 
 	var n := order.size()
 	var slots := clampi(n, 8, 20)
@@ -456,13 +459,13 @@ func _draw_reveal() -> void:
 		_put(origin, Vector2(W / 2 + 330, 930), 3.0)
 
 
-func _button(text: String, on_press: Callable, bg := INK) -> Button:
+func _button(text: String, on_press: Callable, bg := INK, size := 30) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	b.add_theme_font_override("font", f_black)
-	b.add_theme_font_size_override("font_size", 30)
+	b.add_theme_font_size_override("font_size", size)
 	var fg := PAPER if bg == INK else INK
 	for st in ["font_color", "font_hover_color", "font_pressed_color"]: b.add_theme_color_override(st, fg)
 	for st in [["normal", 6], ["hover", 9], ["pressed", 2]]:
@@ -483,7 +486,16 @@ func _on_copy() -> void:
 
 
 func _on_origin() -> void:
-	_send({"t": "origin", "on": not v.showOrigin})
+	_send({"t": "set", "key": "showOrigin", "value": not v.showOrigin})
+
+
+func _on_same() -> void:
+	_send({"t": "set", "key": "sameFormat", "value": not v.sameFormat})
+
+
+func _on_rounds() -> void:
+	var choices := [3, 5, 7, 9]
+	_send({"t": "set", "key": "rounds", "value": choices[(choices.find(int(v.rounds)) + 1) % choices.size()]})
 
 
 func _on_mode() -> void:
@@ -513,7 +525,8 @@ func _ans(n: Control) -> Control:
 
 
 ## One fake internet post. `s` scales everything so the same layout works on the vote board.
-## The twist is the setup, the original answer (wrapped in _ans) is the punchline.
+## The twist is the new question, the original answer (wrapped in _ans) is the punchline.
+## Layout data (header, roles, colours) comes from the server, so new templates need no code here.
 func _post_card(p: Dictionary, s: float) -> Control:
 	var w := 1300.0 * s
 	var pad := maxi(int(30 * s), 8)
@@ -521,65 +534,35 @@ func _post_card(p: Dictionary, s: float) -> Control:
 	var z := func(x: float) -> int: return maxi(int(x * s), 9)  # scale everything together so small cards keep their proportions
 	var who: String = p.who
 	var who_col := Color(p.color)
-	match p.f:
-		"police", "job", "forum":
-			var heads := {"police": ["Protokoll · Vernehmung · Az. 0815/26", INK, "Kommissarin", "Verdächtige Person"],
-				"job": ["Bewerbungsgespräch · Stelle: Filialleitung", BLUE, "Personalchef", "Bewerber:in"],
-				"forum": ["Hilfe-Forum › Alltag & Leben", Color("#1F9E6E"), "Frage von anonym_1987", "★ Hilfreichste Antwort"]}
-			var head: Array = heads[p.f]
-			var a_text: String = p.answer if p.f == "forum" else "„%s“" % p.answer
-			var q := _box(Color.TRANSPARENT, pad, 0, 0)
-			q.add_child(_col([_mono(head[2], z.call(22)), _label(p.twist, z.call(66), INK, f_black, inner)], 4))
-			var a := _box(Color.TRANSPARENT, pad, 0, 0)
-			a.add_child(_col([_mono(head[3], z.call(22)), _label(who, z.call(40), who_col, f_black), _label(a_text, z.call(52), INK, f_bold, inner)], 4))
-			var b := _box(Color("#F4F1EA") if p.f == "police" else WHITE, 0)
-			b.add_child(_col([_bar(head[0], head[1], PAPER, z.call(20), w), q, _rect(Color(INK, 0.3), Vector2(w, 2)), _ans(a)], 0))
-			return b
+	var fc := Color(p.fcolor)
+	var bg := Color(p.fbg)
+	var q_role: String = str(p.qRole).left(1).to_upper() + str(p.qRole).substr(1)
+	var b := _box(bg, 0)
+	match p.kind:
+		"chat":
+			var left := _box(WHITE, pad / 2, z.call(6), 3)
+			left.add_child(_col([_mono(q_role, z.call(22)), _label(p.twist, z.call(60), INK, f_black, inner * 0.8)], 2))
+			var right := _box(who_col, pad / 2, z.call(6), 3)
+			right.add_child(_col([_label(p.answer, z.call(52), WHITE, f_bold, inner * 0.8), _mono("%s · gelesen" % who, z.call(20), WHITE)], 2))
+			var right_row := HBoxContainer.new()
+			right_row.alignment = BoxContainer.ALIGNMENT_END
+			right_row.add_child(right)
+			var chat := _box(Color.TRANSPARENT, pad, 0, 0)
+			chat.add_child(_col([_row([left]), _ans(right_row)], z.call(18)))
+			b.add_child(_col([_bar(p.head, fc, WHITE, z.call(20), w), chat], 0))
 		"lastwords":
 			var body := _box(Color.TRANSPARENT, pad, 0, 0)
 			body.add_child(_col([_mono("Die letzten Worte von %s, kurz bevor" % who, z.call(24), PAPER),
 				_label(p.twist, z.call(66), YELLOW, f_black, inner),
 				_ans(_label("„%s“" % p.answer, z.call(62), PAPER, f_black, inner))], z.call(12)))
-			var b := _box(INK, 0)
-			b.add_child(_col([_bar("Letzte Worte", PINK, WHITE, z.call(20), w), body], 0))
-			return b
-		"headline":
-			var b := _box(WHITE, pad)
-			b.add_child(_col([
-				_row([_label("Der Tagesbote", z.call(46), INK, f_black), _mono("Sa., 1,80 €", z.call(20))], z.call(30)),
-				_rect(INK, Vector2(inner, maxi(int(5 * s), 2))),
-				_label(p.twist, z.call(80), INK, f_black, inner),
-				_ans(_col([_label("„%s“" % p.answer, z.call(52), INK, f_bold, inner), _mono("— %s, Augenzeug:in" % who, z.call(24))], 4)),
-			], z.call(12)))
-			return b
-		"video":
-			var thumb := _box(INK, pad, 0, 0)
-			thumb.custom_minimum_size = Vector2(w, 300 * s)
-			thumb.add_child(_col([_label(p.twist, z.call(66), WHITE, f_black, inner), _rect(PINK, Vector2(w * 0.38, maxi(int(8 * s), 3))), _mono("12:47 · 2,1 Mio. Aufrufe", z.call(20), PAPER)], z.call(14)))
-			var av: int = z.call(64)
-			var c := _box(Color.TRANSPARENT, pad, 0, 0)
-			c.add_child(_col([_mono("Top-Kommentar", z.call(22)),
-				_row([_rect(who_col, Vector2(av, av)), _col([_label(who, z.call(40), who_col, f_black), _label(p.answer, z.call(52), INK, f_bold, inner - av - 16)], 2)], 16)], 8))
-			var b := _box(WHITE, 0)
-			b.add_child(_col([thumb, _ans(c)], 0))
-			return b
-		"review":
-			var st: int = z.call(34)
-			var stars := _row([_rect(YELLOW, Vector2(st, st))], z.call(6))
-			for i in 4:
-				var empty := _box(WHITE, 0, 0, 3)
-				empty.custom_minimum_size = Vector2(st, st)
-				stars.add_child(empty)
-			stars.add_child(_mono("1 von 5", z.call(20)))
-			var b := _box(WHITE, pad)
-			b.add_child(_col([_mono("Kundenbewertung zu", z.call(22), BLUE), _label(p.twist, z.call(70), INK, f_black, inner),
-				_ans(_col([stars, _label(who, z.call(40), who_col, f_black), _label("„%s“" % p.answer, z.call(52), INK, f_bold, inner)], 6))], z.call(10)))
-			return b
-		_:  # classified
-			var b := _box(YELLOW, pad)
-			b.add_child(_col([_mono("Kleinanzeige · Nr. 0815", z.call(22)), _label("Verkaufe: " + p.twist, z.call(70), INK, f_black, inner),
-				_ans(_col([_label(p.answer, z.call(52), INK, f_bold, inner), _rect(INK, Vector2(inner, 3)), _mono("VB · Nur Abholung · Kontakt: " + who, z.call(22))], 8))], z.call(10)))
-			return b
+			b.add_child(_col([_bar(p.head, fc, WHITE, z.call(20), w), body], 0))
+		_:  # qa: someone asks, the player answers
+			var q := _box(Color.TRANSPARENT, pad, 0, 0)
+			q.add_child(_col([_mono("%s fragt" % q_role, z.call(22)), _label(p.twist, z.call(66), INK, f_black, inner)], 4))
+			var a := _box(Color.TRANSPARENT, pad, 0, 0)
+			a.add_child(_col([_mono(p.aRole, z.call(22)), _label(who, z.call(40), who_col, f_black), _label("„%s“" % p.answer, z.call(52), INK, f_bold, inner)], 4))
+			b.add_child(_col([_bar(p.head, fc, WHITE, z.call(20), w), q, _rect(Color(INK, 0.3), Vector2(w, 2)), _ans(a)], 0))
+	return b
 
 
 func _bar(text: String, bg: Color, fg: Color, size: int, w: float) -> Control:

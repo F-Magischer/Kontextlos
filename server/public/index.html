@@ -105,21 +105,17 @@ button:disabled { opacity: .35; }
 .post.stage2 .an { animation: drop .4s cubic-bezier(.2,.9,.2,1) both; }
 .qa { padding: 12px 16px; border-top: 2px dashed rgba(27,26,23,.35); }
 .bar + .qa { border-top: 0; }
-.p-police { background: #F4F1EA; }
-.p-job .bar { background: var(--blue); color: #fff; }
-.p-forum .bar { background: #1F9E6E; color: #fff; }
-.p-lastwords { background: var(--ink); color: var(--paper); } .p-lastwords .bar { background: var(--pink); color: #fff; }
+.p-lastwords { color: var(--paper); }
 .p-lastwords h3 { color: var(--yellow); }
 .p-lastwords .a { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
-.mast { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; border-bottom: 3px solid var(--ink); padding-bottom: 6px; margin-bottom: 6px; }
-.mast b { font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
-.p-headline h3 { font-size: 34px; }
-.thumb { background: var(--ink); color: #fff; padding: 16px; min-height: 130px; display: flex; flex-direction: column; justify-content: flex-end; }
-.prog { display: block; height: 5px; width: 40%; background: var(--pink); margin: 8px 0 6px; }
-.cm { display: flex; gap: 12px; }
-.av { width: 40px; height: 40px; flex: none; border: 2px solid var(--ink); }
-.stars { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; } .stars i { width: 18px; height: 18px; border: 2px solid var(--ink); } .stars i:first-child { background: var(--yellow); }
-.p-classified { background: var(--yellow); } .p-classified hr { border: 0; border-top: 3px solid var(--ink); margin: 10px 0; }
+.chat { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.bub { border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 10px 12px; max-width: 86%; }
+.bub.l { background: var(--white); align-self: flex-start; }
+.bub.r { align-self: flex-end; color: #fff; }
+.bub h3 { font-size: 25px; margin: 2px 0 0; }
+.seg { display: flex; gap: 8px; margin: 4px 0 10px; }
+.seg button { flex: 1; margin: 0; padding: 10px 0; font-size: 21px; background: var(--white); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.seg button.on { background: var(--ink); color: var(--paper); box-shadow: 3px 3px 0 var(--me); }
 textarea.slot {
   display: block; width: 100%; min-height: 0; padding: 6px 8px; resize: none; overflow: hidden; margin: 4px 0;
   font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit;
@@ -214,30 +210,20 @@ function post(p, { edit = false, stage = 2, placeholder = "", max = 70, r = -1 }
   const tw = edit ? `<textarea class="slot" id="txt" rows="1" maxlength="${max}" placeholder="${esc(placeholder)}"></textarea>` : esc(p.twist);
   const a = esc(p.answer), who = esc(p.who), col = esc(p.color);
   const name = `<span class="who" style="color:${col}">${who}</span>`;
-  const body = {
-    police: `<div class="bar">Protokoll · Vernehmung · Az. 0815/26</div>
-      <div class="qa"><span class="lbl">Kommissarin</span><h3>${tw}</h3></div>
-      <div class="qa an"><span class="lbl">Verdächtige Person</span>${name}<p class="a">„${a}“</p></div>`,
-    job: `<div class="bar">Bewerbungsgespräch · Stelle: Filialleitung</div>
-      <div class="qa"><span class="lbl">Personalchef</span><h3>${tw}</h3></div>
-      <div class="qa an"><span class="lbl">Bewerber:in</span>${name}<p class="a">„${a}“</p></div>`,
-    forum: `<div class="bar">Hilfe-Forum › Alltag & Leben</div>
-      <div class="qa"><span class="lbl">Frage von anonym_1987</span><h3>${tw}</h3></div>
-      <div class="qa an"><span class="lbl">★ Hilfreichste Antwort</span>${name}<p class="a">${a}</p></div>`,
-    lastwords: `<div class="bar">Letzte Worte</div><div class="pad">
+  const fc = esc(p.fcolor), cap = (x) => esc(String(x || "").replace(/^./, (c) => c.toUpperCase()));
+  const body = p.kind === "chat"
+    ? `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div>
+      <div class="chat"><div class="bub l"><span class="lbl">${cap(p.qRole)}</span><h3>${tw}</h3></div>
+      <div class="bub r an" style="background:${col}"><p class="a">${a}</p><span class="lbl">${who} · gelesen</span></div></div>`
+    : p.kind === "lastwords"
+    ? `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div><div class="pad">
       <span class="lbl" style="opacity:.85">Die letzten Worte von ${who}, kurz bevor</span><h3>${tw}</h3>
-      <p class="a an">„${a}“</p></div>`,
-    headline: `<div class="pad"><div class="mast"><b>Der Tagesbote</b><span class="mono">Sa., 1,80 €</span></div>
-      <h3>${tw}</h3><div class="an"><p class="a">„${a}“</p><span class="lbl" style="margin-top:6px">— ${who}, Augenzeug:in</span></div></div>`,
-    video: `<div class="thumb"><h3>${tw}</h3><i class="prog"></i><span class="mono">12:47 · 2,1 Mio. Aufrufe</span></div>
-      <div class="pad an"><span class="lbl">Top-Kommentar</span><div class="cm"><i class="av" style="background:${col}"></i><div>${name}<p class="a">${a}</p></div></div></div>`,
-    review: `<div class="pad"><span class="lbl" style="color:var(--blue)">Kundenbewertung zu</span><h3>${tw}</h3>
-      <div class="an"><div class="stars"><i></i><i></i><i></i><i></i><i></i><span class="mono" style="margin-left:6px">1 von 5</span></div>${name}<p class="a">„${a}“</p></div></div>`,
-    classified: `<div class="pad"><span class="lbl">Kleinanzeige · Nr. 0815</span><h3>Verkaufe: ${tw}</h3>
-      <div class="an"><p class="a">${a}</p><hr><span class="lbl">VB · Nur Abholung · Kontakt: ${who}</span></div></div>`,
-  }[p.f] || "";
+      <p class="a an">„${a}“</p></div>`
+    : `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div>
+      <div class="qa"><span class="lbl">${cap(p.qRole)} fragt</span><h3>${tw}</h3></div>
+      <div class="qa an"><span class="lbl">${esc(p.aRole)}</span>${name}<p class="a">„${a}“</p></div>`;
   const origin = stage >= 3 && p.prompt ? `<div class="card prompt slap" style="--r:1.2deg"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div>` : "";
-  return `<div class="post p-${esc(p.f)} stage${stage}" style="--r:${r}deg">${body}</div>${origin}`;
+  return `<div class="post p-${esc(p.kind)} stage${stage}" style="--r:${r}deg;background:${esc(p.fbg)}">${body}</div>${origin}`;
 }
 
 function waitScreen(title, text) { show({ s: "wait", title, text }); }
@@ -262,12 +248,21 @@ function show(d) {
       <p class="mono">${d.count} von max. ${d.max} dabei · ${d.phoneMode ? "Auflösung auf allen Handys" : "Auflösung auf dem großen Bildschirm"}</p>
       <div class="chips">${chips}</div>
       ${d.vip ? `<button id="start" ${can ? "" : "disabled"}>${can ? "Alle da — los!" : `Noch ${d.min - d.count} fehlt`}</button>
+        <div class="or mono">Einstellungen</div>
+        <p class="mono">Runden</p>
+        <div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
+        <button id="same" class="ghost small">Vorlagen: ${d.sameFormat ? "jede Runde gleich für alle" : "gemischt"}</button>
         <button id="origin" class="ghost small">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`
-        : `<div class="card"><p>Gleich geht's los. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
+        : `<p class="mono">${d.rounds} Runden · Vorlagen ${d.sameFormat ? "gleich für alle" : "gemischt"}</p><div class="card"><p>Gleich geht's los. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
       <div class="or mono">Leute einladen</div>
       <button id="share" class="ghost small">Link teilen</button>
       ${d.hasHost ? "" : `<a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
-    if (d.vip) { $("#start").onclick = () => out({ a: "start" }); $("#origin").onclick = () => out({ a: "origin", on: !d.showOrigin }); }
+    if (d.vip) {
+      $("#start").onclick = () => out({ a: "start" });
+      $("#same").onclick = () => out({ a: "set", key: "sameFormat", value: !d.sameFormat });
+      $("#origin").onclick = () => out({ a: "set", key: "showOrigin", value: !d.showOrigin });
+      app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "set", key: "rounds", value: Number(b.dataset.rounds) }));
+    }
     $("#share").onclick = async () => {
       try { if (navigator.share) await navigator.share({ title: "KONTEXTLOS", text: "Spiel mit! Raumcode " + d.code, url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
       catch (e) { if (e.name !== "AbortError") $("#share").textContent = d.link; } // share/clipboard need https

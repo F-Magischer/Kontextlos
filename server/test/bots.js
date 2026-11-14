@@ -61,7 +61,15 @@ function startBots(hostCode) {
       seen.add(d.s);
       assert.equal(d.code, code, "every phone screen carries the room code");
       if (d.s === "lobby") assert(d.players.length === d.count && d.min === 2 && d.max === 20, "lobby lists players");
-      if (d.s === "lobby" && d.vip && d.count === names.length) setTimeout(() => out({ a: "start" }), SLOW);
+      // phone room: the boss picks 3 rounds + same template for everyone, then starts; big screen keeps the defaults (5, mixed)
+      const want = hostCode ? { rounds: 5, sameFormat: false } : { rounds: 3, sameFormat: true };
+      if (d.s === "lobby" && d.vip && d.count === names.length) {
+        if (d.rounds !== want.rounds) out({ a: "set", key: "rounds", value: want.rounds });
+        else if (d.sameFormat !== want.sameFormat) out({ a: "set", key: "sameFormat", value: want.sameFormat });
+        else setTimeout(() => out({ a: "start" }), SLOW);
+      }
+      if (d.s === "write") { const r = Number(d.key.slice(1)); assert(r <= want.rounds, "no round beyond the setting"); seen.add("round" + r); }
+      if (d.s === "vote" && want.sameFormat) assert(new Set(d.options.map((o) => o.post.f)).size === 1, "same template for everyone");
       if (d.s === "write" && d.key[0] === "t") assert(d.post && d.post.answer && !d.post.prompt && !d.post.twist, "twist screen shows the post but not the question");
       if (d.s === "reveal") assert([1, 2].includes(d.stage) && d.post.twist && !d.post.prompt && !d.post.twister, "reveal hides question (default) and twister");
       if (d.s === "vote") assert(d.options.every((o) => !o.post.twister), "vote must not reveal the twister");
@@ -80,6 +88,7 @@ function startBots(hostCode) {
           assert(Object.values(results).some((r) => parseInt(r.text) > 0), "someone scored");
           const need = ["lobby", "write", "vote", "wait", ...(hostCode ? [] : ["reveal", "results", "scores", "dup-refused"])];
           for (const s of need) assert(seen.has(s), "missing " + s);
+          assert(seen.has("round" + want.rounds), "played all rounds");
           console.log("PASS", hostCode ? "(Godot big screen)" : "(phones only)", Object.values(results).map((r) => r.text).join(", "));
           setTimeout(() => done(0), SLOW * 2);
         }

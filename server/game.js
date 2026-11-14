@@ -3,7 +3,7 @@
 const C = require("./content");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
-const ROUNDS = 3;
+const ROUND_CHOICES = [3, 5, 7, 9];
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 20;
 const T = { answer: 60, twist: 75, vote: 30, grace: 1.5, title: 2.4, head: 3.5, body: 5.5, origin: 4, board: 9, scores: 7 };
@@ -16,7 +16,7 @@ const clean = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, m
 
 function createRoom(code, link) {
   return { code, link, host: null, players: new Map(), order: [], phoneMode: false, phase: "lobby", round: 0,
-    showOrigin: false, posts: [], votes: new Map(), used: new Set(), gen: 0, deadline: 0, len: 0, graceMs: 0, beat: null,
+    showOrigin: false, rounds: 5, sameFormat: false, fmtOrder: [], posts: [], votes: new Map(), used: new Set(), gen: 0, deadline: 0, len: 0, graceMs: 0, beat: null,
     counts: [], gains: {}, timers: [], cleanup: null };
 }
 
@@ -25,6 +25,8 @@ const online = (r) => r.order.filter((id) => r.players.get(id).online);
 const vip = (r) => online(r)[0] || "";
 const nameOf = (r, id) => r.players.get(id).name;
 const inRound = (r, id) => r.posts.some((p) => p.answerer === id);
+// last round ×3, second-to-last ×2, everything before ×1
+const mult = (r) => (r.round >= r.rounds ? 3 : r.round === r.rounds - 1 ? 2 : 1);
 const ranked = (r) => [...r.order].sort((a, b) => r.players.get(b).score - r.players.get(a).score);
 
 function to(r, id, d) {
@@ -36,7 +38,8 @@ function to(r, id, d) {
 }
 
 function payload(r, p) {
-  return { f: p.fmt.id, fname: p.fmt.name, twist: p.twist, answer: p.answer, who: nameOf(r, p.answerer),
+  const f = p.fmt;
+  return { f: f.id, fname: f.name, kind: f.kind, head: f.head, qRole: f.q, aRole: f.a, fcolor: f.color, fbg: f.bg, twist: p.twist, answer: p.answer, who: nameOf(r, p.answerer),
     color: r.players.get(p.answerer).color, prompt: p.prompt, twister: nameOf(r, p.twister),
     aDone: !!p.answer, tDone: !!p.twist, aOnline: r.players.get(p.answerer).online, tOnline: r.players.get(p.twister).online };
 }
@@ -52,7 +55,7 @@ function view(r) {
   if (!r.host) return;
   const left = r.deadline ? Math.max(0, (r.deadline - Date.now() - r.graceMs) / 1000) : 0;
   send(r.host, { t: "view", v: {
-    phase: r.phase, round: r.round, rounds: ROUNDS, phoneMode: r.phoneMode, showOrigin: r.showOrigin, link: r.link,
+    phase: r.phase, round: r.round, rounds: r.rounds, mult: mult(r), sameFormat: r.sameFormat, phoneMode: r.phoneMode, showOrigin: r.showOrigin, link: r.link,
     players: r.order.map((id) => { const p = r.players.get(id); return { id, name: p.name, color: p.color, score: p.score, online: p.online, vip: id === vip(r) }; }),
     posts: r.posts.map((p) => payload(r, p)), left, len: r.len, voted: r.votes.size,
     beat: r.beat, counts: r.counts, gains: r.gains,
@@ -116,7 +119,7 @@ function onPlayer(r, id, d) {
   if (d.a === "start" && r.phase === "lobby" && id === vip(r) && online(r).length >= MIN_PLAYERS) startGame(r);
   else if (d.a === "restart" && r.phase === "end" && id === vip(r)) toLobby(r);
   else if (d.a === "mode" && r.phase === "lobby" && id === vip(r)) setMode(r, d.phone);
-  else if (d.a === "origin" && r.phase === "lobby" && id === vip(r)) setOrigin(r, d.on);
+  else if (d.a === "set" && r.phase === "lobby" && id === vip(r)) setOption(r, d.key, d.value);
   else if (d.a === "submit" && r.phase === "answer" && key === `a${r.round}`) {
     for (const p of r.posts) if (p.answerer === id && !p.answer) p.answer = clean(d.text, 80);
     view(r); checkDone(r);
@@ -132,8 +135,12 @@ function onPlayer(r, id, d) {
   }
 }
 
-function setOrigin(r, on) {
-  r.showOrigin = !!on;
+// lobby settings, changed by the boss on a phone or on the big screen
+function setOption(r, key, value) {
+  if (key === "rounds" && ROUND_CHOICES.includes(Number(value))) r.rounds = Number(value);
+  else if (key === "sameFormat") r.sameFormat = !!value;
+  else if (key === "showOrigin") r.showOrigin = !!value;
+  else return;
   pushLobby(r);
   view(r);
 }
@@ -149,7 +156,7 @@ function setMode(r, phone) {
 function pushLobby(r) {
   for (const id of r.order)
     to(r, id, { s: "lobby", vip: id === vip(r), count: online(r).length, min: MIN_PLAYERS, max: MAX_PLAYERS,
-      players: online(r).map((pid) => ({ name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })), phoneMode: r.phoneMode, showOrigin: r.showOrigin, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
+      players: online(r).map((pid) => ({ name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })), phoneMode: r.phoneMode, showOrigin: r.showOrigin, rounds: r.rounds, roundChoices: ROUND_CHOICES, sameFormat: r.sameFormat, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
 }
 
 function toLobby(r) {
@@ -164,6 +171,7 @@ function startGame(r) {
   for (const p of r.players.values()) p.score = 0;
   r.round = 0;
   r.used.clear();
+  r.fmtOrder = shuffle([...C.FORMATS]);
   nextRound(r);
 }
 
@@ -175,11 +183,14 @@ function waitOthers(r) {
 function nextRound(r) {
   r.round++;
   const ids = shuffle(online(r));
+  // "same template" setting: everyone gets this round's format; otherwise a shuffled mix
+  const roundFmt = r.fmtOrder[(r.round - 1) % r.fmtOrder.length];
   const fmts = shuffle([...C.FORMATS]);
-  r.posts = ids.map((id, i) => ({ answerer: id, twister: ids[(i + 1) % ids.length], prompt: pickPrompt(r), fmt: fmts[i % fmts.length], answer: "", twist: "" }));
+  r.posts = ids.map((id, i) => ({ answerer: id, twister: ids[(i + 1) % ids.length], prompt: pickPrompt(r),
+    fmt: r.sameFormat ? roundFmt : fmts[i % fmts.length], answer: "", twist: "" }));
   setPhase(r, "answer", T.answer, T.grace);
   for (const p of r.posts)
-    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round} · Ehrlich sein`, title: p.prompt,
+    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Ehrlich sein`, title: p.prompt,
       placeholder: "Ehrlich. Kurz. Harmlos.", max: 80, seconds: T.answer / SPEED });
   waitOthers(r);
   view(r);
@@ -193,8 +204,8 @@ function endAnswer(r) {
     const post = payload(r, p);
     delete post.prompt;
     delete post.twist;
-    to(r, p.twister, { s: "write", key: `t${r.round}`, tag: `Runde ${r.round} · Verdrehen · ${p.fmt.name}`, post,
-      placeholder: `${p.fmt.label} – ${p.fmt.hint}`, max: 70, seconds: T.twist / SPEED });
+    to(r, p.twister, { s: "write", key: `t${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Verdrehen · ${p.fmt.name}`, post,
+      placeholder: p.fmt.kind === "lastwords" ? `… kurz bevor … – ${p.fmt.hint}` : `Was fragt ${p.fmt.q}? ${p.fmt.hint}`, max: 70, seconds: T.twist / SPEED });
   }
   waitOthers(r);
   view(r);
@@ -246,8 +257,8 @@ async function endVote(r) {
   r.gains = {};
   for (const id of r.order) r.gains[id] = 0;
   r.posts.forEach((p, i) => {
-    r.gains[p.twister] += r.counts[i] * PTS_TWIST * r.round;
-    r.gains[p.answerer] += r.counts[i] * PTS_PITY * r.round;
+    r.gains[p.twister] += r.counts[i] * PTS_TWIST * mult(r);
+    r.gains[p.answerer] += r.counts[i] * PTS_PITY * mult(r);
   });
   for (const id of r.order) r.players.get(id).score += r.gains[id];
   // only now is it revealed who twisted what
@@ -259,10 +270,10 @@ async function endVote(r) {
   if (!(await sleep(r, T.board))) return;
   r.phase = "scores";
   const rows = ranked(r).map((id) => { const p = r.players.get(id); return { name: p.name, color: p.color, score: p.score, gain: r.gains[id] }; });
-  if (r.phoneMode) for (const id of r.order) to(r, id, { s: "scores", title: `Runde ${r.round} vorbei.`, rows, gain: r.gains[id] });
+  if (r.phoneMode) for (const id of r.order) to(r, id, { s: "scores", title: `Runde ${r.round}/${r.rounds} vorbei.`, rows, gain: r.gains[id] });
   view(r);
   if (!(await sleep(r, T.scores))) return;
-  if (r.round < ROUNDS) nextRound(r);
+  if (r.round < r.rounds) nextRound(r);
   else endGame(r);
 }
 
@@ -285,4 +296,4 @@ function checkDone(r) {
   else if (r.phase === "vote" && r.posts.every((p) => r.votes.has(p.answerer) || off(p.answerer))) endVote(r);
 }
 
-module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOrigin, view, pushLobby, MAX_PLAYERS };
+module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOption, view, pushLobby, MAX_PLAYERS };

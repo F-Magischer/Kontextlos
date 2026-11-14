@@ -16,15 +16,18 @@ Zuordnung: Spieler werden gemischt und im Kreis verbunden (jede:r verdreht genau
 
 ## Runden & Punkte
 
-- **Runde 1** ×1, **Runde 2** ×2, **Finale** ×3.
+- Rundenzahl in der Lobby einstellbar: 3, 5 (Standard), 7 oder 9.
+- Vorletzte Runde ×2, letzte Runde ×3, alle davor ×1.
 - Pro Stimme: Verdreher:in +100 × Multiplikator, Opfer (Original-Antwort) +40 × Multiplikator ("Mitleidspunkte").
-- Läuft der Timer ab, schickt jedes Handy automatisch ab, was gerade im Feld steht. Wer gar nichts geschrieben hat, bekommt einen peinlichen Platzhalter-Text.
+- Läuft der Timer ab, schickt jedes Handy automatisch ab, was gerade im Feld steht. Wer gar nichts geschrieben hat, bekommt einen Platzhalter-Text.
+- Einstellung "Vorlagen": gemischt (jede:r eine andere) oder jede Runde eine Vorlage für alle — so lassen sich die Posts direkt vergleichen.
 
-## Formate (eigene Erfindungen, keine echten Marken)
+## Vorlagen
 
-Der Twist ist immer die Vorlage, die ehrliche Antwort die Pointe. Am stärksten sind die Frage-Antwort-Formate, weil der Verdreher der Antwort eine neue Frage gibt:
-Polizeiverhör · Bewerbungsgespräch · Hilfe-Forum · Letzte Worte („… kurz bevor ___“) · Schlagzeile · Videokommentar · 1-Stern-Bewertung · Kleinanzeige.
-Name der Person steht immer groß und in ihrer Farbe direkt über ihrer Antwort.
+Jede Vorlage ist eine Situation, in der jemand etwas fragt. Der Verdreher schreibt die neue Frage, die ehrliche Antwort wird zur Pointe. Darum sind auch die Fragen so gewählt, dass die Antworten zitierbar sind ("Was sagst du, wenn …", "Was hast du immer dabei?").
+
+Polizeiverhör · Bewerbungsgespräch · Millionenfrage · Kinderfrage · Trauung · Arztpraxis · Chat mit Mama · Letzte Worte („… kurz bevor ___“).
+Die Vorlagen stehen als Daten in `server/content.js` (Kopfzeile, Rollen, Farben) — neue Vorlagen brauchen keinen Code auf Handy oder Bildschirm.
 
 ## Art Direction: "Risograph-Zine"
 
