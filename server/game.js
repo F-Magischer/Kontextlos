@@ -82,9 +82,20 @@ function sleep(r, sec) {
 // What kind of question the honest answer fits ("Was", "Wie viel", "Womit" …).
 // The twister gets this (never the question itself) so the new question matches the answer grammatically.
 const QWORDS = ["Welchen", "Wie viele", "Wie viel", "Wie lange", "Wie oft", "Womit", "Wofür", "Wobei", "Wovon", "Worüber", "Welches", "Welche", "Welcher", "Warum", "Wann", "Wer", "Wo", "Wie", "Was"];
+// Phase-1 prompt kinds besides plain questions: prefix in content.js → label on the phone + hint for the twister.
+const PROMPT_KINDS = [
+  { prefix: "Nimm Stellung", label: "Nimm Stellung", word: "Was", hint: "Die Antwort ist eine Meinung zu etwas – z. B. „Was halten Sie von …?“" },
+  { prefix: "Vervollständige", label: "Vervollständige den Satz", word: "Was", hint: "Die Antwort ist ein Satzende – frag nach genau dem, was fehlt." },
+  { prefix: "Hashtags", label: "Gib Hashtags", word: "Was", hint: "Die Antwort sind Hashtags – z. B. „Was posten Sie unter …?“" },
+  { prefix: "In drei Wörtern", label: "In drei Wörtern", word: "Wie", hint: "Die Antwort beschreibt etwas in drei Wörtern – z. B. „Wie würden Sie … beschreiben?“" },
+  { prefix: "Erfinde", label: "Erfinde was", word: "Wie", hint: "Die Antwort ist ein ausgedachter Name oder Titel – z. B. „Wie heißt …?“" },
+  { prefix: "Bewerte", label: "Bewerte von 1 bis 10", word: "Wie", hint: "Die Antwort ist eine Bewertung mit Begründung – z. B. „Wie finden Sie …?“" },
+];
+const kindOf = (prompt) => PROMPT_KINDS.find((k) => prompt.startsWith(k.prefix + ":"));
+
 function questionType(prompt) {
-  if (/^Nimm Stellung/.test(prompt)) return { word: "Was", hint: "Die Antwort ist eine Meinung zu etwas – z. B. „Was halten Sie von …?“" };
-  if (/^Vervollständige/.test(prompt)) return { word: "Was", hint: "Die Antwort ist ein Satzende – frag nach genau dem, was fehlt." };
+  const k = kindOf(prompt);
+  if (k) return { word: k.word, hint: k.hint };
   if (/^Beschreib/.test(prompt)) return { word: "Wie", hint: "Die Antwort beschreibt etwas oder jemanden." };
   if (/^Was (sagst|rufst|flüsterst|murmelst|schreibst|antwortest|singst) /.test(prompt))
     return { word: "Was", hint: "Die Antwort ist ein Satz, den jemand sagt – z. B. „Was sagen Sie, wenn …?“" };
@@ -235,8 +246,8 @@ function nextRound(r) {
     fmt: r.sameFormat ? roundFmt : fmts[i % fmts.length], answer: "", twist: "" }));
   setPhase(r, "answer", T.answer, T.grace);
   for (const p of r.posts)
-    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Ehrlich sein`, title: p.prompt.replace(/^(Nimm Stellung|Vervollständige): /, ""),
-      label: /^Nimm Stellung/.test(p.prompt) ? "Nimm Stellung" : /^Vervollständige/.test(p.prompt) ? "Vervollständige den Satz" : "Ehrliche Frage",
+    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Ehrlich sein`, title: kindOf(p.prompt) ? p.prompt.slice(kindOf(p.prompt).prefix.length + 2) : p.prompt,
+      label: kindOf(p.prompt)?.label || "Ehrliche Frage",
       placeholder: "Ehrlich. Gern ausführlich.", max: 120, seconds: T.answer / SPEED });
   waitOthers(r);
   view(r);

@@ -31,6 +31,7 @@ var _late: Array = []     # answer parts of the post being built; hidden until t
 var cur_key := ""         # reveal: which post is on screen
 var cur_late: Array = []
 var origin_shown := false
+var build := ""           # server build id; a different one after reconnect means: reload the page
 
 var f_black: FontVariation
 var f_bold: FontVariation
@@ -97,6 +98,10 @@ func _send(obj: Dictionary) -> void:
 func _on_server(m: Dictionary) -> void:
 	match m.get("t"):
 		"room":
+			if OS.has_feature("web") and build != "" and str(m.get("build", "")) != build:
+				JavaScriptBridge.eval("location.reload()")  # sessionStorage keeps the room code
+				return
+			build = str(m.get("build", ""))
 			room_code = m.code
 			join_link = "%s/?code=%s" % [m.url, room_code]
 			if OS.has_feature("web"): JavaScriptBridge.eval("sessionStorage.setItem('kl_room','%s')" % room_code)
@@ -589,9 +594,13 @@ func _draw_board(counts: Array) -> void:
 	# suspense: stamps land from fewest to most votes, the winner last
 	var order_by_votes := range(n)
 	order_by_votes.sort_custom(func(a, b): return int(counts[a]) < int(counts[b]) if results else a < b)
+	# layout: most votes top-left, fewer below
+	var slot_of := order_by_votes.duplicate()
+	slot_of.reverse()
 	for i in n:
-		var x := 60.0 + cw * (i % cols) + cw / 2
-		var y := 290.0 + ch * (i / cols) + ch / 2
+		var slot: int = slot_of.find(i) if results else i
+		var x := 60.0 + cw * (slot % cols) + cw / 2
+		var y := 290.0 + ch * (slot / cols) + ch / 2
 		var card := _post_card(v.posts[i], s)
 		_put(card, Vector2(x, y), _tilt(i) * 0.6, i * 0.03, not seen.has("c%d" % i))
 		seen["c%d" % i] = true

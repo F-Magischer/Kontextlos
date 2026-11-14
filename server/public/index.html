@@ -153,6 +153,8 @@ function connect(code, name, create = false) {
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === "joined") {
+      if (window.KL_BUILD && m.build !== window.KL_BUILD) return location.reload(); // new version deployed: load it
+      window.KL_BUILD = m.build;
       me = m; store.set("kl_pid_" + m.code, m.id); store.set("kl_name", m.name); store.set("kl_code", m.code);
       history.replaceState(null, "", "?code=" + m.code);
       $("#who").innerHTML = `<span class="code">${esc(m.code)}</span><b>${esc(m.name)}</b>`;

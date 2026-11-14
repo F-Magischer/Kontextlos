@@ -8,6 +8,8 @@ const QRCode = require("qrcode");
 const G = require("./game");
 
 const PORT = Number(process.env.PORT) || 8080;
+// changes on every deploy; open pages compare it and reload so they never run old code against a new server
+const BUILD = process.env.RENDER_GIT_COMMIT || String(Date.now());
 const PUBLIC = path.join(__dirname, "public");
 const MAX_MSG = 4096;
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf",
@@ -73,7 +75,7 @@ wss.on("connection", (ws) => {
   const joinAs = (r, name, dev) => {
     pid = rid();
     room = r; role = "player";
-    send(ws, { t: "joined", id: pid, code: r.code, name });
+    send(ws, { t: "joined", build: BUILD, id: pid, code: r.code, name });
     G.addPlayer(r, pid, name, ws, dev);
   };
 
@@ -89,7 +91,7 @@ wss.on("connection", (ws) => {
       if (existing && room === existing && room.phase === "lobby") room.phoneMode = false;
       room.host = ws; role = "host";
       clearTimeout(room.cleanup);
-      send(ws, { t: "room", code: room.code, url: room.link });
+      send(ws, { t: "room", code: room.code, url: room.link, build: BUILD });
       if (room.phase === "lobby") G.pushLobby(room);
       G.view(room);
       return;
@@ -113,7 +115,7 @@ wss.on("connection", (ws) => {
         if (old.ws && old.ws !== ws) old.ws.close();
         pid = m.pid; room = r; role = "player";
         clearTimeout(r.cleanup);
-        send(ws, { t: "joined", id: pid, code: r.code, name: old.name });
+        send(ws, { t: "joined", build: BUILD, id: pid, code: r.code, name: old.name });
         G.rejoin(r, pid, ws);
         return;
       }
