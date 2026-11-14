@@ -1,0 +1,4 @@
+*.wasm binary
+*.pck binary
+*.ttf binary
+*.png binary
