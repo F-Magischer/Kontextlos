@@ -41,6 +41,58 @@ exports.PROMPTS = [
   "Was hast du zuletzt verloren?",
   "Wie sieht dein Sonntagsoutfit aus?",
   "Was machst du, wenn du nicht schlafen kannst?",
+  // Stellungnahmen & Satzanfänge: mehr kreativer Freiraum als reine Fragen
+  "Nimm Stellung: Ananas auf Pizza.",
+  "Nimm Stellung: Socken in Sandalen.",
+  "Nimm Stellung: Abends duschen statt morgens.",
+  "Nimm Stellung: Sprachnachrichten über zwei Minuten.",
+  "Nimm Stellung: Leute, die im Zug laut telefonieren.",
+  "Nimm Stellung: Montage.",
+  "Nimm Stellung: Tauben.",
+  "Nimm Stellung: Kartoffelsalat mit Mayo.",
+  "Nimm Stellung: Die Schlummertaste.",
+  "Nimm Stellung: Gruppenarbeit.",
+  "Nimm Stellung: Nacktbaden.",
+  "Nimm Stellung: Leute, die im Fitnessstudio stöhnen.",
+  "Nimm Stellung: Weihnachtsmusik im November.",
+  "Nimm Stellung: Klopapier, das falsch herum hängt.",
+  "Nimm Stellung: Influencer.",
+  "Nimm Stellung: Kaffee nach 18 Uhr.",
+  "Nimm Stellung: Rosinen im Essen.",
+  "Nimm Stellung: Zelten.",
+  "Nimm Stellung: Leute, die beim Essen schmatzen.",
+  "Nimm Stellung: Wasserbetten.",
+  "Vervollständige: Mein geheimes Talent ist …",
+  "Vervollständige: Ich habe noch nie jemandem erzählt, dass …",
+  "Vervollständige: Das Beste, was man um Mitternacht tun kann, ist …",
+  "Vervollständige: Ich werde nie wieder …",
+  "Vervollständige: Mein Körper ist ein Tempel, aber …",
+  "Vervollständige: Ein perfekter Abend endet mit …",
+  "Vervollständige: Wenn ich König wäre, würde ich …",
+  "Vervollständige: Meine Oma sagt immer …",
+  "Vervollständige: Das Problem mit mir ist …",
+  "Vervollständige: Heimlich mag ich …",
+  "Vervollständige: Im Urlaub mache ich immer …",
+  "Vervollständige: Man erkennt mich daran, dass …",
+  "Vervollständige: Ich wünschte, ich könnte …",
+  "Vervollständige: Wenn keiner hinschaut, …",
+  "Vervollständige: Mein letzter Wille ist …",
+  "Welchen Feiertag würdest du erfinden?",
+  "Was wäre dein Wrestler-Name?",
+  "Wie heißt deine Autobiografie?",
+  "Was soll auf deinem Grabstein stehen?",
+  "Welchen Rat würdest du einem Dinosaurier geben?",
+  "Was würdest du einem Einbrecher sagen?",
+  "Was würde dein Haustier über dich erzählen?",
+  "Was ist der schlechteste Name für ein Baby?",
+  "Was würdest du auf ein T-Shirt drucken?",
+  "Was ist dein Kampfschrei?",
+  "Was würdest du gern mal live im Fernsehen sagen?",
+  "Wie würdest du einen Toaster verführen?",
+  "Was ist deine Superkraft im Alltag?",
+  "Was machst du mit einem Elefanten im Wohnzimmer?",
+  "Was steht in deinem Lebenslauf unter „Sonstiges“?",
+  "Was würdest du einem Alien über die Menschheit erzählen?",
   // gut zitierbar: klingen als Antwort auf fast jede neue Frage absurd
   "Was rufst du auf der Achterbahn?",
   "Was murmelst du morgens als Erstes?",
@@ -167,18 +219,32 @@ exports.PROMPTS = [
   "Was würdest du heimlich in die Firmen-Kaffeemaschine kippen?",
 ];
 
-// Every template is a situation where someone asks something: the twister writes the new question,
-// the honest answer becomes the reply. kind: qa = dialogue card, chat = message bubbles, lastwords = sentence to finish.
-// q/a: who asks / who answers. hint: example in the empty slot. fallback: used when the twister writes nothing.
+// Templates are data: the phone and the big screen render any of them, so a new one is one line here.
+// kind: qa = dialogue card, chat = message bubbles, lastwords = sentence to finish.
+// ask: the twister writes a question (the slot starts with the matching question word);
+//      otherwise they write free text (headline, product, diary entry …) for more creative room.
+// qLabel: above the twist · a: above the answer · slot: what goes into the empty field · hint: example.
+const qa = (id, name, head, asker, a, color, hint, fallback, bg = "#FFFDF7") =>
+  ({ id, kind: "qa", ask: true, name, head, qLabel: asker + " fragt", a, color, bg, slot: `Was fragt ${asker.toLowerCase()}?`, hint, fallback });
+const say = (id, name, head, qLabel, a, color, slot, hint, fallback, bg = "#FFFDF7") =>
+  ({ id, kind: "qa", ask: false, name, head, qLabel, a, color, bg, slot, hint, fallback });
+
 exports.FORMATS = [
-  { id: "police", kind: "qa", name: "Polizeiverhör", head: "Protokoll · Vernehmung · Az. 0815/26", q: "die Kommissarin", a: "Verdächtige Person", color: "#1B1A17", bg: "#F4F1EA", hint: "z. B. Wo waren Sie gestern um 23 Uhr?", fallback: "Warum ist Ihr Kofferraum so nass?" },
-  { id: "job", kind: "qa", name: "Bewerbungsgespräch", head: "Bewerbungsgespräch · Stelle: Filialleitung", q: "der Personalchef", a: "Bewerber:in", color: "#2B59C3", bg: "#FFFDF7", hint: "z. B. Was ist Ihre größte Schwäche?", fallback: "Warum sollten wir ausgerechnet Sie nehmen?" },
-  { id: "quiz", kind: "qa", name: "Millionenfrage", head: "Quizshow · Frage für 1.000.000 €", q: "der Moderator", a: "Eingeloggte Antwort", color: "#6B4BD8", bg: "#FFFDF7", hint: "z. B. Was trug Napoleon im Bett?", fallback: "Was ist das Geheimnis einer glücklichen Ehe?" },
-  { id: "kid", kind: "qa", name: "Kinderfrage", head: "Abendbrot · Kind (5) fragt", q: "das Kind", a: "Elternteil", color: "#F26419", bg: "#FFFDF7", hint: "z. B. Wo kommen die Babys her?", fallback: "Warum weint Papa im Auto?" },
-  { id: "wedding", kind: "qa", name: "Trauung", head: "Standesamt · Trauung · 14:00 Uhr", q: "die Standesbeamtin", a: "Braut / Bräutigam", color: "#C8372D", bg: "#FFFDF7", hint: "z. B. Was versprechen Sie einander?", fallback: "Gibt es jemanden, der Einwände hat?" },
-  { id: "doctor", kind: "qa", name: "Arztpraxis", head: "Praxis Dr. Huber · Sprechstunde", q: "die Ärztin", a: "Patient:in", color: "#0B8A8A", bg: "#FFFDF7", hint: "z. B. Und wo genau tut es weh?", fallback: "Wie ist das passiert?" },
-  { id: "mama", kind: "chat", name: "Chat mit Mama", head: "Mama · online", q: "Mama", a: "", color: "#1F9E6E", bg: "#DCE8DF", hint: "z. B. Schatz, was ist das in deinem Zimmer??", fallback: "Warum ruft die Schule an?" },
-  { id: "lastwords", kind: "lastwords", name: "Letzte Worte", head: "Letzte Worte", q: "", a: "", color: "#FF4F79", bg: "#1B1A17", hint: "z. B. der Bär aufwachte", fallback: "der Fallschirm nicht aufging" },
+  qa("police", "Polizeiverhör", "Protokoll · Vernehmung · Az. 0815/26", "Die Kommissarin", "Verdächtige Person", "#1B1A17", "z. B. Wo waren Sie gestern um 23 Uhr?", "Warum ist Ihr Kofferraum so nass?", "#F4F1EA"),
+  qa("job", "Bewerbungsgespräch", "Bewerbungsgespräch · Stelle: Filialleitung", "Der Personalchef", "Bewerber:in", "#2B59C3", "z. B. Was ist Ihre größte Schwäche?", "Warum sollten wir ausgerechnet Sie nehmen?"),
+  qa("quiz", "Millionenfrage", "Quizshow · Frage für 1.000.000 €", "Der Moderator", "Eingeloggte Antwort", "#6B4BD8", "z. B. Was trug Napoleon im Bett?", "Was ist das Geheimnis einer glücklichen Ehe?"),
+  qa("kid", "Kinderfrage", "Abendbrot · Kind (5) fragt", "Das Kind", "Elternteil", "#F26419", "z. B. Wo kommen die Babys her?", "Warum weint Papa im Auto?"),
+  qa("wedding", "Trauung", "Standesamt · Trauung · 14:00 Uhr", "Die Standesbeamtin", "Braut / Bräutigam", "#C8372D", "z. B. Was versprechen Sie einander?", "Was lieben Sie am meisten an Ihrem Partner?"),
+  qa("doctor", "Arztpraxis", "Praxis Dr. Huber · Sprechstunde", "Die Ärztin", "Patient:in", "#0B8A8A", "z. B. Und wo genau tut es weh?", "Wie ist das passiert?"),
+  qa("confession", "Beichtstuhl", "St. Martin · Beichtstuhl 2", "Der Pfarrer", "Beichtende Person", "#6E7F1D", "z. B. Was hast du deinem Nachbarn angetan?", "Was ist deine schlimmste Sünde?", "#F1EEE4"),
+  qa("court", "Gerichtssaal", "Amtsgericht · Saal 3 · Strafsache", "Die Richterin", "Angeklagte Person", "#A61E4D", "z. B. Was hatten Sie in der Nacht vor?", "Was haben Sie zu Ihrer Verteidigung zu sagen?"),
+  { id: "mama", kind: "chat", ask: true, name: "Chat mit Mama", head: "Mama · online", qLabel: "Mama", a: "", color: "#1F9E6E", bg: "#DCE8DF", slot: "Was schreibt Mama?", hint: "z. B. Schatz, was ist das in deinem Zimmer??", fallback: "Warum ruft die Schule an?" },
+  { id: "match", kind: "chat", ask: false, name: "Dating-App", head: "It's a Match · Nachricht", qLabel: "Dein Match", a: "", color: "#D6336C", bg: "#F7E1E8", slot: "Was schreibt das Match?", hint: "z. B. Hey, ich steh auf Leute mit Geheimnissen. Erzähl mal eins", fallback: "Was suchst du hier eigentlich?" },
+  say("news", "Breaking News", "+++ Eilmeldung +++ Live +++", "Eilmeldung", "O-Ton einer Augenzeugin / eines Augenzeugen", "#C8372D", "Schlagzeile", "z. B. Bär bricht in Freibad ein – Polizei ratlos", "Mann klebt sich an Bürgermeister fest"),
+  say("ad", "Werbespot", "Werbung · Sendepause · 20:14 Uhr", "Neu im Handel", "Der Slogan, gesprochen von", "#F26419", "Produkt", "z. B. Sprühsahne für Senioren", "Der Rasenmäher für die Hosentasche", "#FFF4C2"),
+  say("diary", "Tagebuch", "Tagebuch · streng geheim · NICHT LESEN", "Liebes Tagebuch, heute", "Und dann sagte ich", "#6B4BD8", "Was ist heute passiert?", "z. B. hat mich die Lehrerin beim Klauen erwischt", "bin ich aus Versehen auf einer Beerdigung gelandet", "#F3EEFB"),
+  say("review", "1-Stern-Bewertung", "Kundenbewertung · ★☆☆☆☆", "Bewertet wurde", "Bewertung von", "#2B59C3", "Produkt / Ort", "z. B. Das Hotel neben dem Schlachthof", "Ein Fallschirm (gebraucht)"),
+  { id: "lastwords", kind: "lastwords", ask: false, name: "Letzte Worte", head: "Letzte Worte", qLabel: "", a: "", color: "#FF4F79", bg: "#1B1A17", slot: "… kurz bevor …", hint: "z. B. der Bär aufwachte", fallback: "der Fallschirm nicht aufging" },
 ];
 
 exports.NO_ANSWER = ["Dazu sage ich nichts ohne meinen Anwalt.", "Frag nicht.", "Kein Kommentar.", "Das bleibt unter uns."];

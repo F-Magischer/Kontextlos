@@ -7,7 +7,7 @@ Party-Spiel für 2–20 Leute. Ein Bildschirm (Laptop/TV) zeigt das Spiel, alle 
 | Phase | Dauer | Handy | Bildschirm |
 |---|---|---|---|
 | 1. Ehrlich sein | 60 s | Jede:r beantwortet eine harmlose, persönliche Frage | Wer ist fertig? |
-| 2. Verdrehen | 75 s | Du siehst den fertigen Post (z. B. Videokommentar) mit der fremden Antwort darin und tippst direkt in das leere Feld (Videotitel, Schlagzeile …). Die Original-Frage siehst du nicht. | Wer ist fertig? |
+| 2. Verdrehen | 110 s, bis 140 Zeichen | Du siehst den fertigen Post (z. B. Videokommentar) mit der fremden Antwort darin und tippst direkt in das leere Feld (Videotitel, Schlagzeile …). Die Original-Frage siehst du nicht. | Wer ist fertig? |
 | 3. Enthüllung | ~9 s pro Post | (Handy-Modus: dasselbe) | Erst nur der Twist → dann fällt die Antwort rein. Die Original-Frage nur, wenn in der Lobby eingeschaltet. Wer verdreht hat, bleibt geheim. |
 | 4. Abstimmen | 30 s | Welcher Post ist am schlimmsten? (Eigene Verdrehung nicht wählbar) | Countdown |
 | 5. Auszählung & Punkte | — | (Handy-Modus: dasselbe) | Jetzt erst: wer welchen Post verdreht hat, dazu die Stimmen. Danach Rangliste. |
@@ -24,10 +24,12 @@ Zuordnung: Spieler werden gemischt und im Kreis verbunden (jede:r verdreht genau
 
 ## Vorlagen
 
-Jede Vorlage ist eine Situation, in der jemand etwas fragt. Der Verdreher schreibt die neue Frage, die ehrliche Antwort wird zur Pointe. Darum sind auch die Fragen so gewählt, dass die Antworten zitierbar sind ("Was sagst du, wenn …", "Was hast du immer dabei?").
+15 Vorlagen in zwei Sorten:
+- **Frage-Vorlagen** (Feld startet mit dem passenden Fragewort): Polizeiverhör · Bewerbungsgespräch · Millionenfrage · Kinderfrage · Trauung · Arztpraxis · Beichtstuhl · Gerichtssaal · Chat mit Mama.
+- **Freie Vorlagen** (mehr kreativer Freiraum, man schreibt eine Situation statt einer Frage): Breaking News · Werbespot · Tagebuch · Dating-App · 1-Stern-Bewertung · Letzte Worte.
 
-Polizeiverhör · Bewerbungsgespräch · Millionenfrage · Kinderfrage · Trauung · Arztpraxis · Chat mit Mama · Letzte Worte („… kurz bevor ___“).
-Die Vorlagen stehen als Daten in `server/content.js` (Kopfzeile, Rollen, Farben) — neue Vorlagen brauchen keinen Code auf Handy oder Bildschirm.
+In Phase 1 wird nicht nur gefragt: „Nimm Stellung: …“ (Meinung) und „Vervollständige: …“ (Satzende) geben offenere Antworten.
+Vorlagen sind Daten in `server/content.js`; Handy und Bildschirm zeichnen jede davon.
 
 ## Art Direction: "Risograph-Zine"
 

@@ -536,12 +536,11 @@ func _post_card(p: Dictionary, s: float) -> Control:
 	var who_col := Color(p.color)
 	var fc := Color(p.fcolor)
 	var bg := Color(p.fbg)
-	var q_role: String = str(p.qRole).left(1).to_upper() + str(p.qRole).substr(1)
 	var b := _box(bg, 0)
 	match p.kind:
 		"chat":
 			var left := _box(WHITE, pad / 2, z.call(6), 3)
-			left.add_child(_col([_mono(q_role, z.call(22)), _label(p.twist, z.call(60), INK, f_black, inner * 0.8)], 2))
+			left.add_child(_col([_mono(p.qLabel, z.call(22)), _label(p.twist, z.call(60), INK, f_black, inner * 0.8)], 2))
 			var right := _box(who_col, pad / 2, z.call(6), 3)
 			right.add_child(_col([_label(p.answer, z.call(52), WHITE, f_bold, inner * 0.8), _mono("%s · gelesen" % who, z.call(20), WHITE)], 2))
 			var right_row := HBoxContainer.new()
@@ -558,7 +557,7 @@ func _post_card(p: Dictionary, s: float) -> Control:
 			b.add_child(_col([_bar(p.head, fc, WHITE, z.call(20), w), body], 0))
 		_:  # qa: someone asks, the player answers
 			var q := _box(Color.TRANSPARENT, pad, 0, 0)
-			q.add_child(_col([_mono("%s fragt" % q_role, z.call(22)), _label(p.twist, z.call(66), INK, f_black, inner)], 4))
+			q.add_child(_col([_mono(p.qLabel, z.call(22)), _label(p.twist, z.call(66), INK, f_black, inner)], 4))
 			var a := _box(Color.TRANSPARENT, pad, 0, 0)
 			a.add_child(_col([_mono(p.aRole, z.call(22)), _label(who, z.call(40), who_col, f_black), _label("„%s“" % p.answer, z.call(52), INK, f_bold, inner)], 4))
 			b.add_child(_col([_bar(p.head, fc, WHITE, z.call(20), w), q, _rect(Color(INK, 0.3), Vector2(w, 2)), _ans(a)], 0))
@@ -587,6 +586,9 @@ func _draw_board(counts: Array) -> void:
 	var s := minf(cw * 0.9 / 1300.0, ch * 0.85 / 520.0)
 	var top := 0
 	for c in counts: top = maxi(top, int(c))
+	# suspense: stamps land from fewest to most votes, the winner last
+	var order_by_votes := range(n)
+	order_by_votes.sort_custom(func(a, b): return int(counts[a]) < int(counts[b]) if results else a < b)
 	for i in n:
 		var x := 60.0 + cw * (i % cols) + cw / 2
 		var y := 290.0 + ch * (i / cols) + ch / 2
@@ -596,11 +598,14 @@ func _draw_board(counts: Array) -> void:
 		if results:
 			var c := int(counts[i])
 			var hot := c == top and c > 0
-			var big := 34 if n <= 9 else 24
+			var big := (34 if n <= 9 else 24) + (14 if hot else 0)
 			var stamp := _box(PINK if hot else WHITE, 10, 6, 3)
-			stamp.add_child(_col([_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], big, WHITE if hot else INK, f_black),
-				_mono("verdreht von %s" % v.posts[i].twister, int(big * 0.55), WHITE if hot else INK)], 0))
-			_put(stamp, Vector2(x + cw * 0.3, y - ch * 0.4), 6.0, 0.3 + i * 0.06)
+			var lines := [_label("%d %s" % [c, "Stimme" if c == 1 else "Stimmen"], big, WHITE if hot else INK, f_black),
+				_mono("verdreht von %s" % v.posts[i].twister, int(big * 0.55), WHITE if hot else INK)]
+			if hot: lines.push_front(_mono("Bester Post der Runde", int(big * 0.45), YELLOW))
+			stamp.add_child(_col(lines, 0))
+			var at := order_by_votes.find(i)
+			_put(stamp, Vector2(x + cw * 0.3, y - ch * 0.4), 6.0 if not hot else -4.0, 0.5 + at * (3.0 / n) + (0.8 if hot else 0.0))
 
 
 func _show_scores(gains: Dictionary) -> void:

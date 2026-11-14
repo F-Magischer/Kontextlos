@@ -70,8 +70,15 @@ button:disabled { opacity: .35; }
 .dots span:nth-child(2) { animation-delay: .15s; } .dots span:nth-child(3) { animation-delay: .3s; }
 .row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 20px; }
 .row:last-child { border-bottom: 0; }
-.row i { width: 18px; height: 18px; flex: none; border: 2px solid var(--ink); }
-.row .sbar { height: 14px; flex: 1; transform-origin: left; animation: grow .8s cubic-bezier(.2,.9,.2,1) both; }
+.row { display: grid; grid-template-columns: 22px 1fr 56px 52px; row-gap: 4px; }
+.row .track { grid-column: 2 / 5; grid-row: 2; }
+.row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .track { height: 16px; }
+.row .sbar { display: block; height: 100%; border: 2px solid var(--ink); transform-origin: left; animation: grow .8s cubic-bezier(.2,.9,.2,1) both; }
+.mrow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 2px dashed rgba(27,26,23,.25); }
+.mrow b, .mrow s { flex: 1; font-size: 19px; }
+.tiny { width: auto; margin: 0; padding: 6px 10px; font-size: 15px; box-shadow: 3px 3px 0 var(--ink); }
+.sticker.win { display: block; width: fit-content; margin: 2px 0 6px; font-size: 18px; background: var(--yellow); color: var(--ink); }
 .row .pts { font-family: "Plex", monospace; font-size: 16px; min-width: 46px; text-align: right; }
 .row .gain { color: var(--pink); font-family: "Plex", monospace; font-size: 13px; min-width: 48px; text-align: right; }
 .stamp { display: inline-block; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 18px; padding: 4px 10px; transform: rotate(-3deg); margin-bottom: -4px; position: relative; z-index: 1; }
@@ -136,12 +143,13 @@ textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font
 const $ = (s) => document.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const devId = () => { let d = store.get("kl_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("kl_dev", d); } return d; };
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let ws, me = null, last = null, sentKey = null, timerRAF = 0, endTimer = 0;
 
 function connect(code, name, create = false) {
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
-  ws.onopen = () => ws.send(JSON.stringify(create ? { t: "create", name } : { t: "join", code, name, pid: store.get("kl_pid_" + code) }));
+  ws.onopen = () => ws.send(JSON.stringify(create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("kl_pid_" + code) }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === "joined") {
@@ -213,14 +221,14 @@ function post(p, { edit = false, stage = 2, placeholder = "", max = 70, r = -1 }
   const fc = esc(p.fcolor), cap = (x) => esc(String(x || "").replace(/^./, (c) => c.toUpperCase()));
   const body = p.kind === "chat"
     ? `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div>
-      <div class="chat"><div class="bub l"><span class="lbl">${cap(p.qRole)}</span><h3>${tw}</h3></div>
+      <div class="chat"><div class="bub l"><span class="lbl">${esc(p.qLabel)}</span><h3>${tw}</h3></div>
       <div class="bub r an" style="background:${col}"><p class="a">${a}</p><span class="lbl">${who} · gelesen</span></div></div>`
     : p.kind === "lastwords"
     ? `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div><div class="pad">
       <span class="lbl" style="opacity:.85">Die letzten Worte von ${who}, kurz bevor</span><h3>${tw}</h3>
       <p class="a an">„${a}“</p></div>`
     : `<div class="bar" style="background:${fc};color:#fff">${esc(p.head)}</div>
-      <div class="qa"><span class="lbl">${cap(p.qRole)} fragt</span><h3>${tw}</h3></div>
+      <div class="qa"><span class="lbl">${esc(p.qLabel)}</span><h3>${tw}</h3></div>
       <div class="qa an"><span class="lbl">${esc(p.aRole)}</span>${name}<p class="a">„${a}“</p></div>`;
   const origin = stage >= 3 && p.prompt ? `<div class="card prompt slap" style="--r:1.2deg"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div>` : "";
   return `<div class="post p-${esc(p.kind)} stage${stage}" style="--r:${r}deg;background:${esc(p.fbg)}">${body}</div>${origin}`;
@@ -254,6 +262,10 @@ function show(d) {
         <button id="same" class="ghost small">Vorlagen: ${d.sameFormat ? "jede Runde gleich für alle" : "gemischt"}</button>
         <button id="origin" class="ghost small">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`
         : `<p class="mono">${d.rounds} Runden · Vorlagen ${d.sameFormat ? "gleich für alle" : "gemischt"}</p><div class="card"><p>Gleich geht's los. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
+      ${d.vip && (d.players.length > 1 || d.banned.length) ? `<div class="or mono">Spieler verwalten</div>
+        ${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b>
+          <button class="ghost tiny" data-kick="${esc(p.id)}">Kicken</button><button class="tiny" data-ban="${esc(p.id)}">Bannen</button></div>`).join("")}
+        ${d.banned.map((b) => `<div class="mrow"><s>${esc(b.name)}</s><span class="mono">gebannt</span><button class="ghost tiny" data-unban="${esc(b.dev)}">Entbannen</button></div>`).join("")}` : ""}
       <div class="or mono">Leute einladen</div>
       <button id="share" class="ghost small">Link teilen</button>
       ${d.hasHost ? "" : `<a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
@@ -261,6 +273,9 @@ function show(d) {
       $("#start").onclick = () => out({ a: "start" });
       $("#same").onclick = () => out({ a: "set", key: "sameFormat", value: !d.sameFormat });
       $("#origin").onclick = () => out({ a: "set", key: "showOrigin", value: !d.showOrigin });
+      app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
+      app.querySelectorAll("[data-ban]").forEach((b) => b.onclick = () => { if (confirm("Wirklich bannen? Die Person kommt nicht mehr in diesen Raum.")) out({ a: "ban", id: b.dataset.ban }); });
+      app.querySelectorAll("[data-unban]").forEach((b) => b.onclick = () => out({ a: "unban", dev: b.dataset.unban }));
       app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "set", key: "rounds", value: Number(b.dataset.rounds) }));
     }
     $("#share").onclick = async () => {
@@ -279,7 +294,7 @@ function show(d) {
          <div class="slap">${post(d.post, { edit: true, placeholder: d.placeholder, max })}</div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`
       : `<p class="mono">${esc(d.tag)}</p>${timerHTML}
-         <div class="card prompt slap" style="--r:-1.2deg"><span class="mono">Ehrliche Frage</span><div class="q">${esc(d.title)}</div></div>
+         <div class="card prompt slap" style="--r:-1.2deg"><span class="mono">${esc(d.label || "Ehrliche Frage")}</span><div class="q">${esc(d.title)}</div></div>
          <div class="field"><textarea id="txt" maxlength="${max}" placeholder="${esc(d.placeholder || "")}"></textarea></div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`;
     const t = $("#txt");
@@ -309,15 +324,17 @@ function show(d) {
 
   } else if (d.s === "results") {
     const top = Math.max(...d.items.map((it) => it.votes));
-    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + d.items.map((it, i) =>
-      `<div><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${post(it.post, { r: tilt(i) })}</div>`).join("");
+    const items = [...d.items].sort((a, b) => b.votes - a.votes);
+    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + items.map((it, i) =>
+      `<div><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${i === 0 && top > 0 ? `<span class="sticker win">Bester Post der Runde</span>` : ""}${post(it.post, { r: tilt(i) })}</div>`).join("");
 
   } else if (d.s === "scores") {
     const best = Math.max(1, ...d.rows.map((r) => r.score));
     app.innerHTML = `<p class="mono">Punktestand</p><h1>${esc(d.title)}</h1>
       ${d.gain > 0 ? `<div><span class="sticker">+${d.gain} für dich</span></div>` : ""}
-      <div class="card" style="margin-top:22px">${d.rows.map((r) => `<div class="row"><i style="background:${esc(r.color)}"></i><span style="min-width:90px">${esc(r.name)}</span>
-        <span class="sbar" style="background:${esc(r.color)};max-width:${Math.max(4, 100 * r.score / best)}%"></span><span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
+      <div class="card" style="margin-top:22px">${d.rows.map((r, i) => `<div class="row"><span class="mono">${i + 1}</span><span class="nm">${esc(r.name)}</span>
+        <span class="track"><span class="sbar" style="background:${esc(r.color)};width:${Math.max(2, 100 * r.score / best)}%;animation-delay:${.1 + i * .05}s"></span></span>
+        <span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
 
   } else if (d.s === "end") {
     app.innerHTML = `<div class="wait"><p class="mono">Ende</p><div class="place slap">#${d.place}</div>

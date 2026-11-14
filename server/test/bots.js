@@ -71,7 +71,7 @@ function startBots(hostCode) {
       if (d.s === "write") { const r = Number(d.key.slice(1)); assert(r <= want.rounds, "no round beyond the setting"); seen.add("round" + r); }
       if (d.s === "vote" && want.sameFormat) assert(new Set(d.options.map((o) => o.post.f)).size === 1, "same template for everyone");
       if (d.s === "write" && d.key[0] === "t") assert(d.post && d.post.answer && !d.post.prompt && !d.post.twist, "twist screen shows the post but not the question");
-      if (d.s === "write" && d.key[0] === "t") assert(d.post.kind === "lastwords" ? d.qword === "" : /^W/.test(d.qword), "twister gets the question word");
+      if (d.s === "write" && d.key[0] === "t") assert(d.qword === "" || /^W/.test(d.qword), "twister gets a question word (or free text)");
       if (d.s === "reveal") assert([1, 2].includes(d.stage) && d.post.twist && !d.post.prompt && !d.post.twister, "reveal hides question (default) and twister");
       if (d.s === "vote") assert(d.options.every((o) => !o.post.twister), "vote must not reveal the twister");
       if (d.s === "results") assert(d.items.every((it) => it.post.twister && Number.isInteger(it.votes)), "results name the twister");

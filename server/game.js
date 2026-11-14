@@ -6,7 +6,7 @@ const SPEED = Number(process.env.SPEED) || 1; // tests run faster
 const ROUND_CHOICES = [3, 5, 7, 9];
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 20;
-const T = { answer: 60, twist: 75, vote: 30, grace: 1.5, title: 2.4, head: 3.5, body: 5.5, origin: 4, board: 9, scores: 7 };
+const T = { answer: 60, twist: 110, vote: 30, grace: 1.5, title: 2.4, head: 3.5, body: 5.5, origin: 4, board: 9, scores: 7 };
 const PTS_TWIST = 100, PTS_PITY = 40;
 
 const send = (ws, obj) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
@@ -16,7 +16,7 @@ const clean = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, m
 
 function createRoom(code, link) {
   return { code, link, host: null, players: new Map(), order: [], phoneMode: false, phase: "lobby", round: 0,
-    showOrigin: false, rounds: 5, sameFormat: false, fmtOrder: [], posts: [], votes: new Map(), used: new Set(), gen: 0, deadline: 0, len: 0, graceMs: 0, beat: null,
+    showOrigin: false, rounds: 5, sameFormat: false, fmtOrder: [], banned: new Map(), posts: [], votes: new Map(), used: new Set(), gen: 0, deadline: 0, len: 0, graceMs: 0, beat: null,
     counts: [], gains: {}, timers: [], cleanup: null };
 }
 
@@ -39,7 +39,7 @@ function to(r, id, d) {
 
 function payload(r, p) {
   const f = p.fmt;
-  return { f: f.id, fname: f.name, kind: f.kind, head: f.head, qRole: f.q, aRole: f.a, fcolor: f.color, fbg: f.bg, twist: p.twist, answer: p.answer, who: nameOf(r, p.answerer),
+  return { f: f.id, fname: f.name, kind: f.kind, head: f.head, aRole: f.a, qLabel: f.qLabel, fcolor: f.color, fbg: f.bg, twist: p.twist, answer: p.answer, who: nameOf(r, p.answerer),
     color: r.players.get(p.answerer).color, prompt: p.prompt, twister: nameOf(r, p.twister),
     aDone: !!p.answer, tDone: !!p.twist, aOnline: r.players.get(p.answerer).online, tOnline: r.players.get(p.twister).online };
 }
@@ -81,8 +81,10 @@ function sleep(r, sec) {
 
 // What kind of question the honest answer fits ("Was", "Wie viel", "Womit" …).
 // The twister gets this (never the question itself) so the new question matches the answer grammatically.
-const QWORDS = ["Wie viele", "Wie viel", "Wie lange", "Wie oft", "Womit", "Wofür", "Wobei", "Wovon", "Worüber", "Welches", "Welche", "Welcher", "Warum", "Wann", "Wer", "Wo", "Wie", "Was"];
+const QWORDS = ["Welchen", "Wie viele", "Wie viel", "Wie lange", "Wie oft", "Womit", "Wofür", "Wobei", "Wovon", "Worüber", "Welches", "Welche", "Welcher", "Warum", "Wann", "Wer", "Wo", "Wie", "Was"];
 function questionType(prompt) {
+  if (/^Nimm Stellung/.test(prompt)) return { word: "Was", hint: "Die Antwort ist eine Meinung zu etwas – z. B. „Was halten Sie von …?“" };
+  if (/^Vervollständige/.test(prompt)) return { word: "Was", hint: "Die Antwort ist ein Satzende – frag nach genau dem, was fehlt." };
   if (/^Beschreib/.test(prompt)) return { word: "Wie", hint: "Die Antwort beschreibt etwas oder jemanden." };
   if (/^Was (sagst|rufst|flüsterst|murmelst|schreibst|antwortest|singst) /.test(prompt))
     return { word: "Was", hint: "Die Antwort ist ein Satz, den jemand sagt – z. B. „Was sagen Sie, wenn …?“" };
@@ -101,8 +103,8 @@ function pickPrompt(r) {
 
 // ---------------------------------------------------------------- players
 
-function addPlayer(r, id, name, ws) {
-  r.players.set(id, { name, ws, color: C.PLAYER_COLORS[r.order.length % C.PLAYER_COLORS.length], score: 0, online: true, state: {} });
+function addPlayer(r, id, name, ws, dev) {
+  r.players.set(id, { name, ws, dev, color: C.PLAYER_COLORS[r.order.length % C.PLAYER_COLORS.length], score: 0, online: true, state: {} });
   r.order.push(id);
   if (r.phase === "lobby") pushLobby(r);
   else to(r, id, { s: "wait", title: "Gleich bist du dabei.", text: "Ab der nächsten Runde spielst du mit." });
@@ -132,13 +134,15 @@ function onPlayer(r, id, d) {
   else if (d.a === "restart" && r.phase === "end" && id === vip(r)) toLobby(r);
   else if (d.a === "mode" && r.phase === "lobby" && id === vip(r)) setMode(r, d.phone);
   else if (d.a === "set" && r.phase === "lobby" && id === vip(r)) setOption(r, d.key, d.value);
+  else if ((d.a === "kick" || d.a === "ban") && id === vip(r) && d.id !== id) kick(r, String(d.id), d.a === "ban");
+  else if (d.a === "unban" && id === vip(r)) unban(r, String(d.dev));
   else if (d.a === "submit" && r.phase === "answer" && key === `a${r.round}`) {
-    for (const p of r.posts) if (p.answerer === id && !p.answer) p.answer = clean(d.text, 80);
+    for (const p of r.posts) if (p.answerer === id && !p.answer) p.answer = clean(d.text, 120);
     view(r); checkDone(r);
   } else if (d.a === "submit" && r.phase === "twist" && key === `t${r.round}`) {
     for (const p of r.posts) {
       if (p.twister !== id || p.twist) continue;
-      const t = clean(d.text, 70);
+      const t = clean(d.text, 140);
       p.twist = t === questionType(p.prompt).word ? "" : t; // only the prefilled word: counts as empty
     }
     view(r); checkDone(r);
@@ -167,12 +171,37 @@ function setMode(r, phone) {
   view(r);
 }
 
+// Kick removes a player; ban also blocks their device and name from rejoining this room.
+function kick(r, id, ban) {
+  const p = r.players.get(id);
+  if (!p) return;
+  if (ban) r.banned.set(p.dev || "name:" + p.name.toLowerCase(), p.name);
+  const ws = p.ws;
+  p.ws = null;
+  p.online = false;
+  p.kicked = true;
+  send(ws, { t: "error", msg: ban ? "Du wurdest aus diesem Raum gebannt." : "Du wurdest aus dem Raum geworfen." });
+  if (ws) ws.close();
+  if (r.phase === "lobby") { r.players.delete(id); r.order.splice(r.order.indexOf(id), 1); }
+  if (r.phase === "lobby") pushLobby(r);
+  view(r);
+  checkDone(r);
+}
+
+function unban(r, dev) {
+  r.banned.delete(dev);
+  pushLobby(r);
+}
+
+const isBanned = (r, dev, name) => r.banned.has(dev) || [...r.banned.values()].some((n) => n.toLowerCase() === String(name).toLowerCase());
+
 // ---------------------------------------------------------------- flow
 
 function pushLobby(r) {
   for (const id of r.order)
     to(r, id, { s: "lobby", vip: id === vip(r), count: online(r).length, min: MIN_PLAYERS, max: MAX_PLAYERS,
-      players: online(r).map((pid) => ({ name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })), phoneMode: r.phoneMode, showOrigin: r.showOrigin, rounds: r.rounds, roundChoices: ROUND_CHOICES, sameFormat: r.sameFormat, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
+      players: online(r).map((pid) => ({ id: pid, name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })),
+      you: id, banned: id === vip(r) ? [...r.banned].map(([dev, name]) => ({ dev, name })) : [], phoneMode: r.phoneMode, showOrigin: r.showOrigin, rounds: r.rounds, roundChoices: ROUND_CHOICES, sameFormat: r.sameFormat, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
 }
 
 function toLobby(r) {
@@ -206,8 +235,9 @@ function nextRound(r) {
     fmt: r.sameFormat ? roundFmt : fmts[i % fmts.length], answer: "", twist: "" }));
   setPhase(r, "answer", T.answer, T.grace);
   for (const p of r.posts)
-    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Ehrlich sein`, title: p.prompt,
-      placeholder: "Ehrlich. Kurz. Harmlos.", max: 80, seconds: T.answer / SPEED });
+    to(r, p.answerer, { s: "write", key: `a${r.round}`, tag: `Runde ${r.round}/${r.rounds} · Ehrlich sein`, title: p.prompt.replace(/^(Nimm Stellung|Vervollständige): /, ""),
+      label: /^Nimm Stellung/.test(p.prompt) ? "Nimm Stellung" : /^Vervollständige/.test(p.prompt) ? "Vervollständige den Satz" : "Ehrliche Frage",
+      placeholder: "Ehrlich. Gern ausführlich.", max: 120, seconds: T.answer / SPEED });
   waitOthers(r);
   view(r);
 }
@@ -221,8 +251,8 @@ function endAnswer(r) {
     delete post.prompt;
     delete post.twist;
     const qt = questionType(p.prompt);
-    to(r, p.twister, { s: "write", key: `t${r.round}`, qword: p.fmt.kind === "lastwords" ? "" : qt.word, qhint: qt.hint, tag: `Runde ${r.round}/${r.rounds} · Verdrehen · ${p.fmt.name}`, post,
-      placeholder: p.fmt.kind === "lastwords" ? `… kurz bevor … – ${p.fmt.hint}` : `Was fragt ${p.fmt.q}? ${p.fmt.hint}`, max: 70, seconds: T.twist / SPEED });
+    to(r, p.twister, { s: "write", key: `t${r.round}`, qword: p.fmt.ask ? qt.word : "", qhint: qt.hint, tag: `Runde ${r.round}/${r.rounds} · Verdrehen · ${p.fmt.name}`, post,
+      placeholder: `${p.fmt.slot} – ${p.fmt.hint}`, max: 140, seconds: T.twist / SPEED });
   }
   waitOthers(r);
   view(r);
@@ -238,8 +268,10 @@ async function reveal(r) {
   if (!(await sleep(r, T.title))) return;
   // each post in beats: twist alone → the answer drops in → (optional) the innocent question behind it
   const quick = r.posts.length > 8 ? 0.7 : 1; // big groups: keep a round under ~3 minutes
-  const beats = [[1, T.head * quick], [2, T.body * quick], ...(r.showOrigin ? [[3, T.origin * quick]] : [])];
   for (let i = 0; i < r.posts.length; i++) {
+    // longer texts stay longer on screen (reading time ~ 25 characters per second)
+    const tw = r.posts[i].twist.length, an = r.posts[i].answer.length;
+    const beats = [[1, (T.head + tw / 25) * quick], [2, (T.body + (tw + an) / 30) * quick], ...(r.showOrigin ? [[3, T.origin * quick]] : [])];
     for (const [stage, sec] of beats) {
       r.beat = { i, stage };
       view(r);
@@ -284,7 +316,8 @@ async function endVote(r) {
     to(r, id, r.phoneMode ? { s: "results", items }
       : { s: "wait", title: "Auszählung.", text: `+${r.gains[id]} Punkte diese Runde. Schau nach vorn, wer was verdreht hat.` });
   view(r);
-  if (!(await sleep(r, T.board))) return;
+  const chars = r.posts.reduce((n, p) => n + p.twist.length + p.answer.length, 0);
+  if (!(await sleep(r, T.board + Math.min(10, chars / 120)))) return;
   r.phase = "scores";
   const rows = ranked(r).map((id) => { const p = r.players.get(id); return { name: p.name, color: p.color, score: p.score, gain: r.gains[id] }; });
   if (r.phoneMode) for (const id of r.order) to(r, id, { s: "scores", title: `Runde ${r.round}/${r.rounds} vorbei.`, rows, gain: r.gains[id] });
@@ -313,4 +346,4 @@ function checkDone(r) {
   else if (r.phase === "vote" && r.posts.every((p) => r.votes.has(p.answerer) || off(p.answerer))) endVote(r);
 }
 
-module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOption, view, pushLobby, MAX_PLAYERS };
+module.exports = { createRoom, addPlayer, rejoin, leave, onPlayer, setMode, setOption, kick, unban, isBanned, view, pushLobby, MAX_PLAYERS };

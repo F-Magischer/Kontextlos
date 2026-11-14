@@ -70,11 +70,11 @@ const wss = new WebSocketServer({ server, maxPayload: MAX_MSG });
 wss.on("connection", (ws) => {
   let room = null, role = null, pid = null;
 
-  const joinAs = (r, name) => {
+  const joinAs = (r, name, dev) => {
     pid = rid();
     room = r; role = "player";
     send(ws, { t: "joined", id: pid, code: r.code, name });
-    G.addPlayer(r, pid, name, ws);
+    G.addPlayer(r, pid, name, ws, dev);
   };
 
   ws.on("message", (raw) => {
@@ -97,15 +97,18 @@ wss.on("connection", (ws) => {
 
     if (!role && (m.t === "join" || m.t === "create")) {
       const name = String(m.name || "").trim().slice(0, 12);
+      const dev = String(m.dev || "").slice(0, 40); // per-device id, so a ban survives a name change
       if (!name) return send(ws, { t: "error", msg: "Bitte gib einen Namen ein." });
       if (m.t === "create") {
         const r = newRoom();
         r.phoneMode = true; // no big screen: everything shows on the phones
-        return joinAs(r, name);
+        return joinAs(r, name, dev);
       }
       const r = rooms.get(String(m.code || "").toUpperCase().trim());
       if (!r) return send(ws, { t: "error", msg: "Raum nicht gefunden." });
+      if (G.isBanned(r, dev, name)) return send(ws, { t: "error", msg: "Du wurdest aus diesem Raum gebannt." });
       const old = typeof m.pid === "string" && r.players.get(m.pid);
+      if (old && old.kicked) return send(ws, { t: "error", msg: "Du wurdest aus dem Raum geworfen." });
       if (old) {
         if (old.ws && old.ws !== ws) old.ws.close();
         pid = m.pid; room = r; role = "player";
@@ -118,12 +121,14 @@ wss.on("connection", (ws) => {
         if (p.name.toLowerCase() === name.toLowerCase()) return send(ws, { t: "error", msg: "Name ist schon vergeben." });
       if (r.players.size >= G.MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });
       clearTimeout(r.cleanup);
-      return joinAs(r, name);
+      return joinAs(r, name, dev);
     }
 
     if (role === "player" && m.t === "msg") return G.onPlayer(room, pid, m.d);
     if (role === "host" && m.t === "mode" && room.phase === "lobby") return G.setMode(room, m.phone);
     if (role === "host" && m.t === "set" && room.phase === "lobby") return G.setOption(room, m.key, m.value);
+    if (role === "host" && (m.t === "kick" || m.t === "ban")) return G.kick(room, String(m.id), m.t === "ban");
+    if (role === "host" && m.t === "unban") return G.unban(room, String(m.dev));
   });
 
   ws.on("close", () => {
