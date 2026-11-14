@@ -16,18 +16,18 @@ body {
   background-image: radial-gradient(rgba(27,26,23,.13) 1px, transparent 1.2px); background-size: 7px 7px;
   padding: max(16px, env(safe-area-inset-top)) 16px 32px; -webkit-tap-highlight-color: transparent;
 }
-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 22px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 22px; }
 .logo { font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
 .logo span { background: var(--ink); color: var(--paper); padding: 0 4px; }
-.who { font-family: "Plex", monospace; font-size: 13px; text-transform: uppercase; }
-.who b { background: var(--me); color: #fff; padding: 2px 6px; }
+.who { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; text-align: right; }
+.who b { background: var(--me); color: #fff; padding: 2px 6px; margin-left: 6px; }
 .mono { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
 h1 { font-weight: 800; font-size: 34px; line-height: .95; letter-spacing: -.03em; margin: 6px 0 14px; }
 h2 { font-weight: 700; font-size: 22px; line-height: 1.05; letter-spacing: -.01em; margin: 6px 0 12px; }
 p { font-size: 17px; line-height: 1.35; }
 .card { background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 14px; margin: 8px 0 22px; }
-.quote { background: var(--yellow); transform: rotate(-1.2deg); }
-.quote .q { font-size: 21px; font-weight: 700; line-height: 1.15; margin-top: 4px; }
+.quote { background: var(--yellow); transform: rotate(1.2deg); }
+.quote .q { font-size: 21px; font-weight: 800; line-height: 1.1; margin-top: 4px; }
 label { display: block; margin-bottom: 6px; }
 input, textarea {
   width: 100%; font: 600 20px "Brico", system-ui, sans-serif; color: var(--ink);
@@ -37,7 +37,7 @@ input:focus, textarea:focus { box-shadow: 4px 4px 0 var(--me); }
 textarea { min-height: 120px; resize: none; }
 input#code { text-transform: uppercase; letter-spacing: .3em; font-family: "Plex", monospace; }
 .field { margin-bottom: 16px; }
-.count { text-align: right; margin-top: 4px; }
+.count { text-align: right; margin-top: -12px; margin-bottom: 8px; }
 button {
   width: 100%; font: 800 22px "Brico", system-ui, sans-serif; letter-spacing: -.01em;
   background: var(--ink); color: var(--paper); border: 3px solid var(--ink); padding: 16px;
@@ -47,11 +47,40 @@ button:active { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--me); 
 button:disabled { opacity: .35; }
 .opt { display: block; text-align: left; font: 600 18px/1.25 "Brico", system-ui, sans-serif; background: #fff; color: var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 0 0 14px; }
 .opt small { display: block; font: 12px "Plex", monospace; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
-.opt.sel { background: var(--me); color: #fff; }
-.opt.sel small { color: #fff; }
+.opt.full { padding: 0; background: none; border: 0; box-shadow: none; margin-bottom: 26px; }
 .err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; }
 .big { font-size: 64px; font-weight: 800; line-height: 1; }
-.timer { height: 8px; background: var(--ink); margin: -14px 0 18px; transform-origin: left; }
+.timer { height: 8px; background: var(--ink); margin: 0 0 18px; transform-origin: left; }
+.row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 2px solid var(--ink); font-weight: 800; font-size: 20px; }
+.row i { width: 18px; height: 18px; flex: none; }
+.row .pts { margin-left: auto; font-family: "Plex", monospace; font-size: 16px; }
+.row .gain { color: var(--pink); font-family: "Plex", monospace; font-size: 13px; min-width: 44px; text-align: right; }
+
+/* fake internet posts: same layouts as the big screen */
+.post { background: #fff; border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 14px; margin: 6px 0 22px; transform: rotate(-.8deg); text-align: left; }
+.post h3 { font-weight: 800; font-size: 25px; line-height: 1.02; letter-spacing: -.02em; margin: 6px 0; }
+.post p { font-size: 17px; font-weight: 500; line-height: 1.25; }
+.post .mono { font-size: 10px; }
+.post.stage1 .an { visibility: hidden; }
+.mast { display: flex; gap: 10px; align-items: baseline; border-bottom: 3px solid var(--ink); padding-bottom: 6px; }
+.mast b { font-weight: 800; font-size: 18px; }
+.thumb { background: var(--ink); color: #fff; padding: 12px; min-height: 120px; margin-bottom: 8px; }
+.prog { display: block; height: 4px; width: 40%; background: var(--pink); margin: 8px 0; }
+.cm { display: flex; gap: 10px; margin-top: 6px; } .av { width: 30px; height: 30px; flex: none; }
+.stars { display: flex; gap: 3px; align-items: center; } .stars i { width: 15px; height: 15px; border: 2px solid var(--ink); } .stars i:first-child { background: var(--yellow); }
+.stars .mono { margin-left: 8px; }
+.p-dating { background: var(--pink); color: #fff; } .p-dating h3 { color: var(--ink); }
+.bar { border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 8px; margin-bottom: 8px; }
+.p-chat { background: #DCE3EE; padding: 0 0 12px; } .p-chat .head { background: var(--blue); color: #fff; padding: 12px; }
+.bubble { background: #fff; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); margin: 12px 12px 0; padding: 10px; width: 82%; }
+.p-classified { background: var(--yellow); } .p-classified hr { border: 0; border-top: 3px solid var(--ink); margin: 8px 0; }
+.p-poster { background: var(--ink); color: var(--paper); text-align: center; padding: 26px 16px; } .p-poster h3 { font-size: 34px; text-transform: uppercase; }
+textarea.slot {
+  display: block; width: 100%; min-height: 0; padding: 4px 6px; resize: none; overflow: hidden;
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit;
+  background: rgba(255,79,121,.10); border: 2px dashed currentColor;
+}
+textarea.slot::placeholder { color: inherit; opacity: .45; font-size: .7em; text-transform: none; letter-spacing: 0; }
 .hide { display: none !important; }
 </style>
 </head>
@@ -63,16 +92,20 @@ const $ = (s) => document.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
-let ws, me = null, last = null, sentKey = null, timerRAF = 0;
+let ws, me = null, last = null, sentKey = null, timerRAF = 0, endTimer = 0;
 
 function connect(code, name) {
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
   ws.onopen = () => ws.send(JSON.stringify({ t: "join", code, name, pid: store.get("kl_pid_" + code) }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.t === "joined") { me = m; store.set("kl_pid_" + m.code, m.id); store.set("kl_name", m.name); store.set("kl_code", m.code); $("#who").innerHTML = `<b>${esc(m.name)}</b>`; show({ s: "wait", title: "Du bist drin!", text: "Schau auf den großen Bildschirm." }); }
+    if (m.t === "joined") {
+      me = m; store.set("kl_pid_" + m.code, m.id); store.set("kl_name", m.name); store.set("kl_code", m.code);
+      $("#who").innerHTML = `Raum ${esc(m.code)}<b>${esc(m.name)}</b>`;
+      show({ s: "wait", title: "Du bist drin!", text: "Gleich geht's los." });
+    }
     else if (m.t === "error") { me = null; joinScreen(m.msg); }
-    else if (m.t === "hostgone") show({ s: "wait", title: "Verbindung weg", text: "Der Bildschirm ist offline. Warte kurz …" });
+    else if (m.t === "hostgone") show({ s: "wait", title: "Verbindung weg", text: "Der Spiel-Bildschirm ist offline. Warte kurz …" });
     else if (m.t === "msg") show(m.d);
   };
   ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
@@ -95,45 +128,98 @@ function joinScreen(err) {
   };
 }
 
-function timerBar(sec) {
-  cancelAnimationFrame(timerRAF);
-  const bar = $(".timer"); if (!bar || !sec) return;
+// Timer bar + a hard end callback (setTimeout keeps working when rAF is paused).
+function timer(sec, onEnd) {
+  cancelAnimationFrame(timerRAF); clearTimeout(endTimer);
+  const bar = $(".timer"); if (!sec) return;
   const end = performance.now() + sec * 1000, total = sec * 1000;
-  const tick = () => { const left = Math.max(0, end - performance.now()); bar.style.transform = `scaleX(${left / total})`; if (left > 0) timerRAF = requestAnimationFrame(tick); };
+  const tick = () => { const left = Math.max(0, end - performance.now()); if (bar) bar.style.transform = `scaleX(${left / total})`; if (left > 0) timerRAF = requestAnimationFrame(tick); };
   tick();
+  if (onEnd) endTimer = setTimeout(onEnd, sec * 1000);
 }
+
+// One fake internet post. edit=true turns the twist into a text field right where it will appear.
+function post(p, { edit = false, stage = 2, placeholder = "", max = 70 } = {}) {
+  const tw = edit ? `<textarea class="slot" id="txt" rows="1" maxlength="${max}" placeholder="${esc(placeholder)}"></textarea>` : esc(p.twist);
+  const a = esc(p.answer), who = esc(p.who), col = esc(p.color);
+  const body = {
+    headline: `<div class="mast"><b>Der Tagesbote</b><span class="mono">Ausgabe 214 · 1,80 €</span></div>
+      <h3>${tw}</h3><p class="an">„${a}“, sagt ${who}.</p>`,
+    video: `<div class="thumb"><h3>${tw}</h3><i class="prog"></i><span class="mono">12:47 · 2,1 Mio. Aufrufe</span></div>
+      <div class="an"><span class="mono">1.204 Kommentare</span><div class="cm"><i class="av" style="background:${col}"></i><div><span class="mono" style="color:${col}">@${who}</span><p>${a}</p></div></div></div>`,
+    review: `<span class="mono" style="color:var(--blue)">Kundenbewertung</span><h3>${tw}</h3>
+      <div class="an"><div class="stars"><i></i><i></i><i></i><i></i><i></i><span class="mono">1 von 5 · Verifizierter Kauf</span></div><p style="margin-top:6px">„${a}“</p><span class="mono">— ${who}, vor 3 Tagen</span></div>`,
+    dating: `<h3 style="color:#fff">${who}, 31 <span class="mono">0,4 km entfernt</span></h3><h3>${tw}</h3>
+      <div class="an"><span class="mono">Über mich</span><p>${a}</p></div>`,
+    search: `<div class="bar"><h3 style="margin:0">${tw}</h3></div>
+      <div class="an"><span class="mono">Ungefähr 3 Ergebnisse (0,41 s)</span><br><span class="mono" style="color:var(--blue)">Ratgeber-Forum › Beitrag von ${who}</span><p>„${a}“</p></div>`,
+    chat: `<div class="head"><h3 style="margin:0">${tw}</h3><span class="mono">6 Mitglieder</span></div>
+      <div class="bubble an"><span class="mono" style="color:${col}">${who}</span><p>${a}</p><span class="mono">23:47</span></div>`,
+    classified: `<span class="mono">Kleinanzeige · Nr. 0815</span><h3>Verkaufe: ${tw}</h3>
+      <div class="an"><p>${a}</p><hr><span class="mono">VB · Nur Abholung · Kontakt: ${who}</span></div>`,
+    poster: `<h3>${tw}</h3><div class="an"><p>${a}</p><span class="mono" style="color:var(--pink)">— ${who}</span></div>`,
+  }[p.f] || "";
+  const origin = stage >= 3 ? `<div class="card quote"><span class="mono">Eigentlich gefragt war ${who}:</span><div class="q">${esc(p.prompt)}</div></div><p class="mono">Verdreht von ${esc(p.twister)}</p>` : "";
+  return `<div class="post p-${esc(p.f)} stage${stage}">${body}</div>${origin}`;
+}
+
+function waitScreen(title, text) { show({ s: "wait", title, text }); }
 
 function show(d) {
   // ignore duplicate state resends so typing isn't wiped
   const sig = JSON.stringify(d);
   if (sig === last) return;
   last = sig;
+  cancelAnimationFrame(timerRAF); clearTimeout(endTimer);
   if (d.color) document.documentElement.style.setProperty("--me", d.color);
+
   if (d.s === "lobby") {
-    app.innerHTML = `<p class="mono">Raum ${esc(me?.code)}</p><h1>${d.count} von 8<br>sind da.</h1>
+    const mode = d.phoneMode ? "Handy-Modus: Ihr seht alles auch hier." : "Bildschirm-Modus: Die Auflösung läuft vorne.";
+    app.innerHTML = `<p class="mono">Raum ${esc(me?.code)} · ${mode}</p><h1>${d.count} von 8<br>sind da.</h1>
       ${d.vip ? `<div class="card"><p>Du bist <b>Boss</b> dieser Runde. Starte, sobald alle drin sind (mind. 3).</p></div>
       <button id="start" ${d.count < 3 ? "disabled" : ""}>Alle da — los!</button>` : `<div class="card"><p>Gleich geht's los. Der Boss startet das Spiel.</p></div>`}`;
     if (d.vip) $("#start").onclick = () => out({ a: "start" });
+
   } else if (d.s === "write") {
-    if (sentKey === d.key) return show({ s: "wait", title: "Abgeschickt.", text: "Warte auf die anderen …" });
-    app.innerHTML = `<p class="mono">${esc(d.tag)}</p><h2>${esc(d.title)}</h2><div class="timer"></div>
-      ${d.quote ? `<div class="card quote"><span class="mono">${esc(d.quoteLabel)}</span><div class="q">„${esc(d.quote)}"</div></div>` : ""}
-      <div class="field"><label class="mono" for="txt">${esc(d.label)}</label><textarea id="txt" maxlength="${d.max || 80}" placeholder="${esc(d.placeholder || "")}"></textarea><div class="count mono" id="cnt">0/${d.max || 80}</div></div>
-      <button id="send">Abschicken</button>`;
+    if (sentKey === d.key) return waitScreen("Abgeschickt.", "Warte auf die anderen …");
+    const max = d.max || 80;
+    app.innerHTML = d.post
+      ? `<p class="mono">${esc(d.tag)}</p><div class="timer"></div>${post(d.post, { edit: true, placeholder: d.placeholder, max })}
+         <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`
+      : `<p class="mono">${esc(d.tag)}</p><h2>${esc(d.title)}</h2><div class="timer"></div>
+         <div class="field"><textarea id="txt" maxlength="${max}" placeholder="${esc(d.placeholder || "")}"></textarea></div>
+         <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`;
     const t = $("#txt");
-    t.oninput = () => { $("#cnt").textContent = `${t.value.length}/${d.max || 80}`; };
-    $("#send").onclick = () => { if (!t.value.trim()) return t.focus(); sentKey = d.key; out({ a: "submit", key: d.key, text: t.value.trim() }); show({ s: "wait", title: "Abgeschickt.", text: "Warte auf die anderen …" }); };
-    timerBar(d.seconds);
+    const grow = () => { if (d.post) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; } };
+    t.oninput = () => { $("#cnt").textContent = `${t.value.length}/${max}`; grow(); };
+    grow();
+    const submit = () => { sentKey = d.key; out({ a: "submit", key: d.key, text: t.value.trim() }); waitScreen("Abgeschickt.", "Warte auf die anderen …"); };
+    $("#send").onclick = () => { if (!t.value.trim()) return t.focus(); submit(); };
+    // time's up: send whatever is typed (the screen fills in a fallback if it's empty)
+    timer(d.seconds, () => { if (sentKey !== d.key) { t.blur(); submit(); waitScreen("Zeit um!", "Dein Text wurde abgeschickt."); } });
+
   } else if (d.s === "vote") {
-    if (sentKey === d.key) return show({ s: "wait", title: "Stimme gezählt.", text: "Mal sehen, wer gewinnt …" });
+    if (sentKey === d.key) return waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …");
     app.innerHTML = `<p class="mono">Abstimmung</p><h2>${esc(d.title)}</h2><div class="timer"></div>` +
-      d.options.map((o) => `<button class="opt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
-    app.querySelectorAll(".opt").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); show({ s: "wait", title: "Stimme gezählt.", text: "Mal sehen, wer gewinnt …" }); });
-    timerBar(d.seconds);
+      d.options.map((o) => d.full && o.post
+        ? `<button class="opt full" data-i="${o.i}">${post(o.post)}</button>`
+        : `<button class="opt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
+    app.querySelectorAll(".opt").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …"); });
+    timer(d.seconds);
+
+  } else if (d.s === "reveal") {
+    app.innerHTML = `<p class="mono">${esc(d.tag)}</p>${post(d.post, { stage: d.stage })}`;
+
+  } else if (d.s === "scores") {
+    app.innerHTML = `<p class="mono">Punktestand</p><h1>${esc(d.title)}</h1>
+      <div class="card">${d.rows.map((r, i) => `<div class="row"><span class="mono">${i + 1}</span><i style="background:${esc(r.color)}"></i>${esc(r.name)}
+        <span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
+
   } else if (d.s === "end") {
     app.innerHTML = `<p class="mono">Ende</p><div class="big">#${d.place}</div><h2>${esc(d.text)}</h2>
       ${d.vip ? `<button id="again">Nochmal spielen</button>` : ""}`;
     if (d.vip) $("#again").onclick = () => out({ a: "restart" });
+
   } else {
     app.innerHTML = `<h1>${esc(d.title || "Augen nach vorn.")}</h1><p>${esc(d.text || "")}</p>`;
   }

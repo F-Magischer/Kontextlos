@@ -17,8 +17,10 @@ const MIN_PLAYERS := 3
 const T_ANSWER := 60.0
 const T_TWIST := 75.0
 const T_VOTE := 30.0
-const T_SETUP := 2.6   # question + original answer on screen
-const T_POST := 6.0    # twisted post on screen
+const GRACE := 1.5     # phones auto-submit when their timer hits 0; give those messages time to arrive
+const T_HEAD := 3.5    # reveal: only the twist (headline/title) is visible
+const T_BODY := 5.5    # reveal: the original answer drops in
+const T_ORIGIN := 4.0  # reveal: the innocent question it really answered
 const PTS_TWIST := 100
 const PTS_PITY := 40
 
@@ -40,6 +42,11 @@ var posts: Array = []   # {answerer, twister, prompt, fmt, answer, twist}
 var votes := {}         # voter id -> post index
 var deadline := 0.0
 var phase_len := 1.0
+var phase_grace := 0.0
+var phone_mode := false  # false: big screen shows everything; true: every phone also shows reveal + results
+var qr_tex: Texture2D
+var copied_until := 0.0
+var _late: Array = []    # answer parts of the post being built; hidden until the reveal drops them in
 var gen := 0            # bumps on every phase change; stale awaits bail out
 var used_prompts: Array = []
 var seen := {}          # stickers already animated on the current screen
@@ -59,6 +66,7 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--server="): server_url = a.trim_prefix("--server=")
 		if a == "--fast": speed = 12.0
+		if a == "--phone-mode": phone_mode = true
 		if a.begins_with("--shots="): _shoot(a.trim_prefix("--shots="))
 	if OS.has_feature("web"):
 		server_url = str(JavaScriptBridge.eval("(location.protocol==='https:'?'wss://':'ws://')+location.host"))
@@ -92,7 +100,7 @@ func _process(_dt: float) -> void:
 	if deadline > 0.0:
 		var left := deadline - _now()
 		timer_bar.visible = true
-		timer_bar.scale.x = clampf(left / phase_len, 0.0, 1.0)
+		timer_bar.scale.x = clampf((left - phase_grace) / phase_len, 0.0, 1.0)
 		if left <= 0.0:
 			deadline = 0.0
 			_on_timeout()
@@ -120,6 +128,7 @@ func _on_server(m: Dictionary) -> void:
 			hud_code.text = room_code
 			hud_url.text = join_url.replace("http://", "").replace("https://", "")
 			if phase == P.CONNECTING: _set_phase(P.LOBBY)
+			_load_qr()
 			_render()
 		"join":
 			var id: String = m.id
@@ -168,12 +177,13 @@ func _on_player(id: String, d: Dictionary) -> void:
 
 # ---------------------------------------------------------------- game flow
 
-func _set_phase(p: P, seconds := 0.0) -> void:
+func _set_phase(p: P, seconds := 0.0, grace := 0.0) -> void:
 	phase = p
 	gen += 1
 	seen.clear()
 	phase_len = maxf(seconds / speed, 0.01)
-	deadline = _now() + phase_len if seconds > 0.0 else 0.0
+	phase_grace = grace / speed
+	deadline = _now() + phase_len + phase_grace if seconds > 0.0 else 0.0
 
 
 func _to_lobby() -> void:
@@ -188,7 +198,7 @@ func _to_lobby() -> void:
 
 func _push_lobby() -> void:
 	for id in order:
-		_to(id, {"s": "lobby", "vip": id == _vip(), "count": _online().size()})
+		_to(id, {"s": "lobby", "vip": id == _vip(), "count": _online().size(), "phoneMode": phone_mode})
 
 
 func _start_game() -> void:
@@ -208,7 +218,7 @@ func _next_round() -> void:
 	for i in ids.size():
 		posts.append({"answerer": ids[i], "twister": ids[(i + 1) % ids.size()], "prompt": _pick_prompt(),
 			"fmt": fmts[i % fmts.size()], "answer": "", "twist": ""})
-	_set_phase(P.ANSWER, T_ANSWER)
+	_set_phase(P.ANSWER, T_ANSWER, GRACE)
 	for p in posts:
 		_to(p.answerer, {"s": "write", "key": "a%d" % round_no, "tag": "Runde %d · Ehrlich sein" % round_no,
 			"title": p.prompt, "label": "Deine Antwort", "placeholder": "Ehrlich. Kurz. Harmlos.", "max": 80, "seconds": T_ANSWER / speed})
@@ -219,11 +229,14 @@ func _next_round() -> void:
 func _end_answer() -> void:
 	for p in posts:
 		if p.answer == "": p.answer = C.NO_ANSWER.pick_random()
-	_set_phase(P.TWIST, T_TWIST)
+	_set_phase(P.TWIST, T_TWIST, GRACE)
 	for p in posts:
-		_to(p.twister, {"s": "write", "key": "t%d" % round_no, "tag": "Runde %d · Verdrehen" % round_no,
-			"title": p.fmt.task, "quoteLabel": "%s auf: %s" % [_name(p.answerer), p.prompt], "quote": p.answer,
-			"label": p.fmt.label, "placeholder": p.fmt.hint, "max": 70, "seconds": T_TWIST / speed})
+		# no prompt in here on purpose: the twister only sees the answer in its new context
+		var post := _payload(p)
+		post.erase("prompt")
+		post.erase("twist")
+		_to(p.twister, {"s": "write", "key": "t%d" % round_no, "tag": "Runde %d · Verdrehen · %s" % [round_no, p.fmt.name],
+			"post": post, "placeholder": "%s – %s" % [p.fmt.label, p.fmt.hint], "max": 70, "seconds": T_TWIST / speed})
 	_wait_others()
 	_render()
 
@@ -234,17 +247,48 @@ func _end_twist() -> void:
 	_set_phase(P.REVEAL)
 	var g := gen
 	for id in order:
-		_to(id, {"s": "wait", "title": "Augen nach vorn.", "text": "Jetzt wird's peinlich."})
+		_to(id, {"s": "wait", "title": "Runde %d" % round_no, "text": "Was das Internet daraus gemacht hat …" if phone_mode else "Augen nach vorn. Jetzt wird's peinlich."})
 	_show_round_title()
 	await _wait(2.4)
 	for i in posts.size():
 		if g != gen: return
-		_show_setup(posts[i])
-		await _wait(T_SETUP)
-		if g != gen: return
-		_show_post(posts[i])
-		await _wait(T_POST)
+		await _reveal_post(posts[i], i, g)
 	if g == gen: _start_vote()
+
+
+## One post in three beats: twist alone → answer drops in → the innocent question behind it.
+func _reveal_post(p: Dictionary, i: int, g: int) -> void:
+	_clear()
+	_late.clear()
+	var card := _post_card(p, 1.0)
+	var late := _late.duplicate()
+	for n in late: n.modulate.a = 0.0
+	_put(_mono("Post %d von %d · %s" % [i + 1, posts.size(), p.fmt.name], 24), Vector2(W / 2, 170), 0, 0, false)
+	_put(card, Vector2(W / 2, 560), -1.2)
+	_phones_reveal(p, i, 1)
+	await _wait(T_HEAD)
+	if g != gen: return
+	for n in late: create_tween().tween_property(n, "modulate:a", 1.0, 0.18)
+	_phones_reveal(p, i, 2)
+	await _wait(T_BODY)
+	if g != gen: return
+	var origin := _box(YELLOW, 22, 8)
+	origin.add_child(_col([_mono("Eigentlich gefragt war %s:" % _name(p.answerer), 20), _label(p.prompt, 44, INK, f_black, 760)], 4))
+	_put(origin, Vector2(W / 2 + 330, 930), 3.0)
+	_put(_mono("Verdreht von %s" % _name(p.twister), 24), Vector2(W / 2 - 520, 930), -2.0, 0.2)
+	_phones_reveal(p, i, 3)
+	await _wait(T_ORIGIN)
+
+
+func _payload(p: Dictionary) -> Dictionary:
+	return {"f": p.fmt.id, "twist": p.twist, "answer": p.answer, "who": _name(p.answerer),
+		"color": players[p.answerer].color, "prompt": p.prompt, "twister": _name(p.twister)}
+
+
+func _phones_reveal(p: Dictionary, i: int, stage: int) -> void:
+	if not phone_mode: return
+	for id in order:
+		_to(id, {"s": "reveal", "stage": stage, "post": _payload(p), "tag": "Post %d von %d · %s" % [i + 1, posts.size(), p.fmt.name]})
 
 
 func _start_vote() -> void:
@@ -255,8 +299,9 @@ func _start_vote() -> void:
 		var opts := []
 		for i in posts.size():
 			if posts[i].twister != id:
-				opts.append({"i": i, "tag": posts[i].fmt.name, "text": "%s — „%s“" % [posts[i].twist, posts[i].answer]})
-		_to(id, {"s": "vote", "key": "v%d" % round_no, "title": "Welcher Post ist am schlimmsten?", "options": opts, "seconds": T_VOTE / speed})
+				opts.append({"i": i, "tag": posts[i].fmt.name, "text": "%s — „%s“" % [posts[i].twist, posts[i].answer], "post": _payload(posts[i])})
+		_to(id, {"s": "vote", "key": "v%d" % round_no, "title": "Welcher Post ist am schlimmsten?", "options": opts,
+			"full": phone_mode, "seconds": T_VOTE / speed})
 	_wait_others()
 	_render()
 
@@ -274,13 +319,19 @@ func _end_vote() -> void:
 		gains[posts[i].twister] += counts[i] * PTS_TWIST * round_no
 		gains[posts[i].answerer] += counts[i] * PTS_PITY * round_no
 	for id in gains: players[id].score += gains[id]
+	var rows := []
+	for id in _ranked():
+		rows.append({"name": _name(id), "color": players[id].color, "score": players[id].score, "gain": gains[id]})
 	for id in order:
-		_to(id, {"s": "wait", "title": "Auszählung.", "text": "+%d Punkte diese Runde." % gains[id]})
+		if phone_mode:
+			_to(id, {"s": "scores", "title": "Runde %d vorbei." % round_no, "rows": rows, "gain": gains[id]})
+		else:
+			_to(id, {"s": "wait", "title": "Auszählung.", "text": "+%d Punkte diese Runde." % gains[id]})
 	_draw_board(counts)
-	await _wait(5.0)
+	await _wait(6.0)
 	if g != gen: return
 	_show_scores(gains)
-	await _wait(6.0)
+	await _wait(7.0)
 	if g != gen: return
 	if round_no < ROUNDS: _next_round()
 	else: _end_game()
@@ -537,19 +588,32 @@ func _draw_lobby() -> void:
 		_label("Sag was", 150, INK, f_black),
 		_label("Harmloses.", 150, INK, f_black),
 	], -40)
-	_put(title, Vector2(560, 380), -2.0, 0, not seen.has("title"))
+	_put(title, Vector2(560, 330), -2.0, 0, not seen.has("title"))
 	var sub := _box(PINK, 20, 8)
 	sub.add_child(_label("Wir machen's schlimm.", 54, WHITE, f_black))
-	_put(sub, Vector2(520, 590), 2.5, 0.08, not seen.has("title"))
+	_put(sub, Vector2(520, 530), 2.5, 0.08, not seen.has("title"))
 	seen["title"] = true
 
-	var how := _col([
-		_mono("So geht's", 22),
-		_label("1  Handy raus, Adresse oben rechts öffnen.", 34, INK, f_mid, 760),
-		_label("2  Raumcode eingeben, Name dazu.", 34, INK, f_mid, 760),
-		_label("3  Wer zuerst drin ist, startet.", 34, INK, f_mid, 760),
-	], 8)
-	_put(how, Vector2(500, 830), 0, 0, false)
+	var qr := _box(WHITE, 10, 8, 4)
+	var tr := TextureRect.new()
+	tr.texture = qr_tex
+	tr.custom_minimum_size = Vector2(250, 250)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	qr.add_child(tr)
+	_put(qr, Vector2(250, 820), -1.5, 0, false)
+
+	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy)
+	var mode := _button("Modus: Alle am Handy" if phone_mode else "Modus: Großer Bildschirm", _on_mode, YELLOW)
+	var side := _col([
+		_mono("Scannen oder öffnen", 20),
+		_label(_join_link().replace("http://", "").replace("https://", ""), 30, INK, f_mono),
+		copy,
+		_rect(Color.TRANSPARENT, Vector2(1, 8)),
+		mode,
+		_mono("Handy-Modus: Auflösung auch auf jedem Handy" if phone_mode else "Auflösung nur hier auf dem Bildschirm", 16),
+	], 10)
+	_put(side, Vector2(700, 830), 0, 0, false)
 
 	for i in 8:
 		var center := Vector2(1240 + (i % 2) * 400, 300 + (i / 2) * 170)
@@ -603,19 +667,62 @@ func _show_round_title() -> void:
 	_put(b, Vector2(W / 2, 640), 2.0, 0.15)
 
 
-func _show_setup(p: Dictionary) -> void:
-	_clear()
-	_put(_mono("%s wurde gefragt:" % _name(p.answerer), 28), Vector2(W / 2, 330), 0, 0, false)
-	_put(_label(p.prompt, 70, INK, f_black, 1500, HORIZONTAL_ALIGNMENT_CENTER), Vector2(W / 2, 430), -1.0)
-	var q := _box(YELLOW, 30)
-	q.add_child(_label("„%s“" % p.answer, 64, INK, f_bold, 1200, HORIZONTAL_ALIGNMENT_CENTER))
-	_put(q, Vector2(W / 2, 640), 1.5, 0.35)
+func _button(text: String, on_press: Callable, bg := INK) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.add_theme_font_override("font", f_black)
+	b.add_theme_font_size_override("font_size", 30)
+	var fg := PAPER if bg == INK else INK
+	for st in ["font_color", "font_hover_color", "font_pressed_color"]: b.add_theme_color_override(st, fg)
+	for st in [["normal", 6], ["hover", 9], ["pressed", 2]]:
+		var sb := _box(bg, 14, st[1], 3).get_theme_stylebox("panel").duplicate()
+		sb.shadow_color = PINK if bg == INK else INK
+		sb.content_margin_left = 22; sb.content_margin_right = 22
+		b.add_theme_stylebox_override(st[0], sb)
+	b.pressed.connect(on_press)
+	return b
 
 
-func _show_post(p: Dictionary) -> void:
-	_clear()
-	_put(_mono("%s · Antwort: %s · Verdreht von: %s" % [p.fmt.name, _name(p.answerer), _name(p.twister)], 24), Vector2(W / 2, 170), 0, 0, false)
-	_put(_post_card(p, 1.0), Vector2(W / 2, 590), -1.2)
+func _on_copy() -> void:
+	DisplayServer.clipboard_set(_join_link())
+	copied_until = _now() + 2.0
+	_render()
+	await get_tree().create_timer(2.0).timeout
+	if phase == P.LOBBY: _render()
+
+
+func _on_mode() -> void:
+	phone_mode = not phone_mode
+	_push_lobby()
+	_render()
+
+
+func _join_link() -> String:
+	return "%s/?code=%s" % [join_url, room_code]
+
+
+func _load_qr() -> void:
+	var req := HTTPRequest.new()
+	add_child(req)
+	req.request_completed.connect(_on_qr.bind(req))
+	var http := server_url.replace("wss://", "https://").replace("ws://", "http://")
+	req.request("%s/qr/%s.png" % [http, room_code])
+
+
+func _on_qr(result: int, code: int, _h: PackedStringArray, body: PackedByteArray, req: HTTPRequest) -> void:
+	req.queue_free()
+	var img := Image.new()
+	if result == HTTPRequest.RESULT_SUCCESS and code == 200 and img.load_png_from_buffer(body) == OK:
+		qr_tex = ImageTexture.create_from_image(img)
+		if phase == P.LOBBY: _render()
+
+
+## Marks a node as part of the original answer (revealed after the twist).
+func _ans(n: Control) -> Control:
+	_late.append(n)
+	return n
 
 
 ## One fake internet post. `s` scales everything so the same layout works on the vote board.
@@ -631,7 +738,7 @@ func _post_card(p: Dictionary, s: float) -> Control:
 				_row([_label("Der Tagesbote", fs.call(40), INK, f_black), _mono("Ausgabe 214 · 1,80 €", fs.call(18))], fs.call(30)),
 				_rect(INK, Vector2(w, fs.call(5))),
 				_label(p.twist, fs.call(76), INK, f_black, w),
-				_label("„%s“, sagt %s." % [p.answer, who], fs.call(38), INK, f_mid, w),
+				_ans(_label("„%s“, sagt %s." % [p.answer, who], fs.call(38), INK, f_mid, w)),
 			], fs.call(16)))
 			return b
 		"video":
@@ -639,8 +746,8 @@ func _post_card(p: Dictionary, s: float) -> Control:
 			thumb.custom_minimum_size = Vector2(w, fs.call(300))
 			thumb.add_child(_col([_label(p.twist, fs.call(60), WHITE, f_black, w - fs.call(56)), _rect(PINK, Vector2(w * 0.38, fs.call(8))), _mono("12:47 · 2,1 Mio. Aufrufe", fs.call(18), PAPER)], fs.call(18)))
 			var b := _box(WHITE, fs.call(20))
-			b.add_child(_col([thumb, _mono("1.204 Kommentare", fs.call(18)),
-				_row([_rect(who_col, Vector2(fs.call(56), fs.call(56))), _col([_mono("@" + who, fs.call(20), who_col), _label(p.answer, fs.call(40), INK, f_mid, w - fs.call(90))], 2)], fs.call(18)),
+			b.add_child(_col([thumb, _ans(_mono("1.204 Kommentare", fs.call(18))),
+				_ans(_row([_rect(who_col, Vector2(fs.call(56), fs.call(56))), _col([_mono("@" + who, fs.call(20), who_col), _label(p.answer, fs.call(40), INK, f_mid, w - fs.call(90))], 2)], fs.call(18))),
 			], fs.call(16)))
 			return b
 		"review":
@@ -651,20 +758,20 @@ func _post_card(p: Dictionary, s: float) -> Control:
 				stars.add_child(empty)
 			var b := _box(WHITE, fs.call(36))
 			b.add_child(_col([_mono("Kundenbewertung", fs.call(20), BLUE), _label(p.twist, fs.call(62), INK, f_black, w),
-				_row([stars, _mono("1 von 5 · Verifizierter Kauf", fs.call(18))], fs.call(16)),
-				_label("„%s“" % p.answer, fs.call(42), INK, f_mid, w), _mono("— %s, vor 3 Tagen" % who, fs.call(18))], fs.call(14)))
+				_ans(_row([stars, _mono("1 von 5 · Verifizierter Kauf", fs.call(18))], fs.call(16))),
+				_ans(_label("„%s“" % p.answer, fs.call(42), INK, f_mid, w)), _ans(_mono("— %s, vor 3 Tagen" % who, fs.call(18)))], fs.call(14)))
 			return b
 		"dating":
 			var b := _box(PINK, fs.call(36))
 			b.add_child(_col([_row([_label(who + ", 31", fs.call(56), WHITE, f_black), _mono("0,4 km entfernt", fs.call(18), WHITE)], fs.call(20)),
-				_label(p.twist, fs.call(64), INK, f_black, w), _mono("Über mich", fs.call(18), WHITE), _label(p.answer, fs.call(44), WHITE, f_mid, w)], fs.call(12)))
+				_label(p.twist, fs.call(64), INK, f_black, w), _ans(_mono("Über mich", fs.call(18), WHITE)), _ans(_label(p.answer, fs.call(44), WHITE, f_mid, w))], fs.call(12)))
 			return b
 		"search":
 			var bar := _box(WHITE, fs.call(20), fs.call(6), 3)
 			bar.add_child(_label(p.twist, fs.call(50), INK, f_bold, w - fs.call(40)))
 			var b := _box(WHITE, fs.call(32))
-			b.add_child(_col([bar, _mono("Ungefähr 3 Ergebnisse (0,41 s)", fs.call(18)), _mono("Ratgeber-Forum › Beitrag von " + who, fs.call(18), BLUE),
-				_label("„%s“" % p.answer, fs.call(46), INK, f_mid, w)], fs.call(16)))
+			b.add_child(_col([bar, _ans(_mono("Ungefähr 3 Ergebnisse (0,41 s)", fs.call(18))), _ans(_mono("Ratgeber-Forum › Beitrag von " + who, fs.call(18), BLUE)),
+				_ans(_label("„%s“" % p.answer, fs.call(46), INK, f_mid, w))], fs.call(16)))
 			return b
 		"chat":
 			var head := _box(BLUE, fs.call(20), 0, 0)
@@ -673,16 +780,16 @@ func _post_card(p: Dictionary, s: float) -> Control:
 			var bubble := _box(WHITE, fs.call(22), fs.call(6), 3)
 			bubble.add_child(_col([_mono(who, fs.call(20), who_col), _label(p.answer, fs.call(44), INK, f_mid, w * 0.75), _mono("23:47", fs.call(16))], 4))
 			var b := _box(Color("#DCE3EE"), 0)
-			b.add_child(_col([head, _wrap(_row([_rect(Color.TRANSPARENT, Vector2(fs.call(10), 1)), bubble])), _rect(Color.TRANSPARENT, Vector2(1, fs.call(14)))], fs.call(22)))
+			b.add_child(_col([head, _ans(_wrap(_row([_rect(Color.TRANSPARENT, Vector2(fs.call(10), 1)), bubble]))), _rect(Color.TRANSPARENT, Vector2(1, fs.call(14)))], fs.call(22)))
 			return b
 		"classified":
 			var b := _box(YELLOW, fs.call(36))
 			b.add_child(_col([_mono("Kleinanzeige · Nr. 0815", fs.call(20)), _label("Verkaufe: " + p.twist, fs.call(66), INK, f_black, w),
-				_label(p.answer, fs.call(42), INK, f_mid, w), _rect(INK, Vector2(w, 3)), _mono("VB · Nur Abholung · Kontakt: " + who, fs.call(18))], fs.call(14)))
+				_ans(_label(p.answer, fs.call(42), INK, f_mid, w)), _rect(INK, Vector2(w, 3)), _ans(_mono("VB · Nur Abholung · Kontakt: " + who, fs.call(18)))], fs.call(14)))
 			return b
 		_:  # poster
 			var inner := _col([_label(p.twist.to_upper(), fs.call(96), PAPER, f_black, w, HORIZONTAL_ALIGNMENT_CENTER),
-				_label(p.answer, fs.call(40), PAPER, f_mid, w, HORIZONTAL_ALIGNMENT_CENTER), _mono("— " + who, fs.call(18), PINK)], fs.call(18))
+				_ans(_label(p.answer, fs.call(40), PAPER, f_mid, w, HORIZONTAL_ALIGNMENT_CENTER)), _ans(_mono("— " + who, fs.call(18), PINK))], fs.call(18))
 			var b := _box(INK, fs.call(50))
 			b.add_child(inner)
 			return b

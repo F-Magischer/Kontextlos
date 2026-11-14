@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { WebSocketServer } = require("ws");
+const QRCode = require("qrcode");
 
 const PORT = Number(process.env.PORT) || 8080;
 const PUBLIC = path.join(__dirname, "public");
@@ -21,6 +22,13 @@ function lanUrl() {
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  const qr = p.match(/^\/qr\/([A-Z]{4})\.png$/);
+  if (qr) {
+    QRCode.toBuffer(`${lanUrl()}/?code=${qr[1]}`, { type: "png", margin: 1, scale: 10, color: { dark: "#1B1A17", light: "#FFFDF7" } })
+      .then((png) => res.writeHead(200, { "Content-Type": "image/png", "Cross-Origin-Resource-Policy": "same-origin" }).end(png))
+      .catch(() => res.writeHead(500).end());
+    return;
+  }
   if (p.endsWith("/")) p += "index.html";
   const file = path.normalize(path.join(PUBLIC, p));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403).end(); return; }

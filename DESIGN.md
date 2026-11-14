@@ -7,8 +7,8 @@ Party-Spiel für 3–8 Leute. Ein Bildschirm (Laptop/TV) zeigt das Spiel, alle s
 | Phase | Dauer | Handy | Bildschirm |
 |---|---|---|---|
 | 1. Ehrlich sein | 60 s | Jede:r beantwortet eine harmlose, persönliche Frage | Wer ist fertig? |
-| 2. Verdrehen | 75 s | Du bekommst die Antwort einer anderen Person + ein Internet-Format und schreibst den Kontext drumherum (Schlagzeile, Videotitel, Produktname …) | Wer ist fertig? |
-| 3. Enthüllung | ~6 s pro Post | — | Jeder Post wird groß im passenden Format gezeigt: erst die Original-Frage, dann der Twist |
+| 2. Verdrehen | 75 s | Du siehst den fertigen Post (z. B. Videokommentar) mit der fremden Antwort darin und tippst direkt in das leere Feld (Videotitel, Schlagzeile …). Die Original-Frage siehst du nicht. | Wer ist fertig? |
+| 3. Enthüllung | ~13 s pro Post | (Handy-Modus: dasselbe) | Drei Takte: erst nur der Twist → dann fällt die Antwort rein → dann die harmlose Original-Frage |
 | 4. Abstimmen | 30 s | Welcher Post ist am schlimmsten? (Eigene Verdrehung nicht wählbar) | Countdown |
 | 5. Punkte | — | — | Rangliste mit Bewegung |
 
@@ -18,7 +18,7 @@ Zuordnung: Spieler werden gemischt und im Kreis verbunden (jede:r verdreht genau
 
 - **Runde 1** ×1, **Runde 2** ×2, **Finale** ×3.
 - Pro Stimme: Verdreher:in +100 × Multiplikator, Opfer (Original-Antwort) +40 × Multiplikator ("Mitleidspunkte").
-- Wer nicht rechtzeitig schreibt, bekommt einen peinlichen Platzhalter-Text — das Spiel bleibt nie hängen.
+- Läuft der Timer ab, schickt jedes Handy automatisch ab, was gerade im Feld steht. Wer gar nichts geschrieben hat, bekommt einen peinlichen Platzhalter-Text.
 
 ## Formate (eigene Erfindungen, keine echten Marken)
 

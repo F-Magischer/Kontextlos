@@ -19,7 +19,7 @@ kids.push(server);
 server.stdout.once("data", () => {
   // SHOTS=<dir>: windowed, real speed, screenshots every 2 s (for art review)
   const mode = process.env.SHOTS ? ["--", `--server=ws://localhost:${PORT}`, `--shots=${process.env.SHOTS}`]
-    : ["--headless", "--", `--server=ws://localhost:${PORT}`, "--fast"];
+    : ["--headless", "--", `--server=ws://localhost:${PORT}`, "--fast", "--phone-mode"];
   const host = spawn(GODOT, ["--path", path.join(__dirname, "..", "..", "game"), ...mode]);
   kids.push(host);
   host.stderr.on("data", (d) => process.stderr.write("[godot] " + d));
@@ -52,6 +52,8 @@ function startBots(code) {
       const d = m.d;
       seen.add(d.s);
       if (d.s === "lobby" && d.vip && d.count === names.length) setTimeout(() => out({ a: "start" }), SLOW);
+      if (d.s === "write" && d.key[0] === "t") assert(d.post && d.post.answer && !d.post.prompt && !d.post.twist, "twist screen must show the post but not the question");
+      if (d.s === "reveal") assert([1, 2, 3].includes(d.stage) && d.post.twist, "reveal stage");
       // Dana stays silent in round 1 so the timeout + fallback path runs too
       if (d.s === "write" && !(name === "Dana" && d.key === "a1" && !SLOW)) out({ a: "submit", key: d.key, text: (d.key[0] === "a" ? ANSWERS : TWISTS)[(n + d.key.length + Number(d.key.slice(1))) % 4] });
       if (d.s === "vote") {
@@ -64,7 +66,7 @@ function startBots(code) {
           const places = Object.values(results).map((r) => r.place).sort();
           assert.deepEqual(places, [1, 2, 3, 4]);
           assert(Object.values(results).some((r) => parseInt(r.text) > 0), "someone scored");
-          for (const s of ["lobby", "write", "vote", "wait", "dup-refused"]) assert(seen.has(s), "missing " + s);
+          for (const s of ["lobby", "write", "vote", "wait", "reveal", "scores", "dup-refused"]) assert(seen.has(s), "missing " + s);
           console.log("PASS", results);
           setTimeout(() => done(0), SLOW * 2);
         }
