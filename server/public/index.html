@@ -131,6 +131,15 @@ textarea.slot {
 }
 @keyframes pulse { 50% { background: rgba(255,79,121,.28); } }
 textarea.slot:focus { animation: none; background: rgba(255,79,121,.08); }
+/* landscape tablets, laptops, TVs: wider page, centred column, side-by-side where it helps */
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  .wrap { max-width: 1240px; padding-left: 48px; padding-right: 48px; }
+  main { width: 100%; max-width: 760px; margin: 0 auto; }
+  main.start { max-width: none; display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 80px; align-content: center; padding-bottom: 6vh; }
+  main.start h1 { font-size: clamp(64px, 8vw, 128px); }
+  main.cols { max-width: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); column-gap: 40px; align-content: start; }
+  main.cols > :not(.opt):not(.optxt):not(.res) { grid-column: 1 / -1; }
+}
 textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font-weight: 600; letter-spacing: 0; }
 </style>
 </head>
@@ -171,18 +180,18 @@ const screenHost = (code) => "host/" + (code ? "?code=" + encodeURIComponent(cod
 function startScreen(err) {
   last = null;
   const code0 = new URLSearchParams(location.search).get("code") || "";
-  app.className = "in";
+  app.className = "in start";
   app.innerHTML = `
-    ${err ? `<div class="err">${esc(err)}</div>` : ""}
-    <h1>Sag was<br>Harmloses.</h1>
-    <div><span class="sticker">Wir machen's schlimm.</span></div>
+    <div><h1>Sag was<br>Harmloses.</h1>
+    <div><span class="sticker">Wir machen's schlimm.</span></div></div>
+    <div>${err ? `<div class="err">${esc(err)}</div>` : ""}
     <div class="field" style="margin-top:28px"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
     <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
     <button id="go">Mitspielen</button>
     <div class="or mono">oder</div>
     <button id="new" class="ghost">Neuen Raum erstellen</button>
     <a class="btn ghost small" id="screen" href="${screenHost(code0)}">Als großen Bildschirm öffnen (TV / Beamer)</a>
-    <p class="mono" style="margin-top:22px;opacity:.7;text-transform:none">Hinweis: Antworten und Spielverlauf werden anonym gespeichert, um das Spiel zu verbessern. Keine Konten, keine IP-Adressen.</p>`;
+    <p class="mono" style="margin-top:22px;opacity:.7;text-transform:none">Hinweis: Antworten und Spielverlauf werden anonym gespeichert, um das Spiel zu verbessern. Keine Konten, keine IP-Adressen.</p></div>`;
   const codeIn = $("#code");
   codeIn.oninput = () => { $("#screen").href = screenHost(codeIn.value.trim().toUpperCase()); };
   $("#go").onclick = () => {
@@ -317,6 +326,7 @@ function show(d) {
       d.options.map((o, i) => d.full && o.post
         ? `<button class="opt" data-i="${o.i}">${post(o.post, { r: tilt(i) })}</button>`
         : `<button class="optxt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
+    app.classList.add("cols");
     app.querySelectorAll("[data-i]").forEach((b) => b.onclick = () => { sentKey = d.key; out({ a: "vote", key: d.key, i: Number(b.dataset.i) }); waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …"); });
     timer(d.seconds);
 
@@ -328,8 +338,9 @@ function show(d) {
   } else if (d.s === "results") {
     const top = Math.max(...d.items.map((it) => it.votes));
     const items = [...d.items].sort((a, b) => b.votes - a.votes);
+    app.classList.add("cols");
     app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + items.map((it, i) =>
-      `<div><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${i === 0 && top > 0 ? `<span class="sticker win">Bester Post der Runde</span>` : ""}${post(it.post, { r: tilt(i) })}</div>`).join("");
+      `<div class="res"><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${i === 0 && top > 0 ? `<span class="sticker win">Bester Post der Runde</span>` : ""}${post(it.post, { r: tilt(i) })}</div>`).join("");
 
   } else if (d.s === "scores") {
     const best = Math.max(1, ...d.rows.map((r) => r.score));

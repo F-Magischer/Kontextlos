@@ -65,7 +65,10 @@ async function page(req, res, live) {
 h1{font:800 40px system-ui;margin:0 0 8px}h2{background:#2B59C3;color:#fff;display:inline-block;padding:4px 10px;margin:28px 0 8px;box-shadow:4px 4px 0 #1B1A17}
 .big{font-size:20px}.big b{background:#FFD23F;padding:0 6px}div.w{overflow-x:auto}table{border-collapse:collapse;background:#FFFDF7;border:3px solid #1B1A17;width:100%}
 th,td{border-bottom:1px solid #1B1A17;padding:5px 8px;text-align:left;vertical-align:top}th{background:#FF4F79;color:#fff}input{font:inherit;padding:6px;border:3px solid #1B1A17}button{font:inherit;padding:6px 12px;border:3px solid #1B1A17;background:#FFD23F}</style>
-<h1>KONTEXTLOS · Daten</h1>${body.replace(/<table>/g, '<div class="w"><table>').replace(/<\/table>/g, "</table></div>")}`);
+<script>// refresh every 30 s without losing scroll position or a search being typed
+setInterval(async () => { if (document.activeElement.tagName === "INPUT") return;
+  try { const r = await fetch(location.href, { cache: "no-store" }); if (r.ok) { const d = new DOMParser().parseFromString(await r.text(), "text/html"); document.getElementById("d").replaceWith(d.getElementById("d")); } } catch {} }, 30000);</script>
+<h1>KONTEXTLOS · Daten</h1><div id="d"><p style="opacity:.6">aktualisiert sich alle 30 s · Stand ${new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin" })}</p>${body.replace(/<table>/g, '<div class="w"><table>').replace(/<\/table>/g, "</table></div>")}</div>`);
 }
 
 module.exports = { log, page };

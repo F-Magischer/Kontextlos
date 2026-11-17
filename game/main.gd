@@ -305,6 +305,21 @@ func _build_frame() -> void:
 	timer_bar.visible = false
 	hud.add_child(timer_bar)
 
+	# the big screen is laid out for 16:9; on a portrait screen it would be unreadably small, so ask to turn it
+	var turn := ColorRect.new()
+	turn.color = PAPER
+	turn.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var msg := _col([_label("Bitte quer halten.", 150, INK, f_black, 1400, HORIZONTAL_ALIGNMENT_CENTER),
+		_label("Der große Bildschirm ist fürs Querformat gemacht (TV, Laptop, Beamer). Zum Mitspielen am Handy einfach die Startseite öffnen.", 64, INK, f_mid, 1400, HORIZONTAL_ALIGNMENT_CENTER)], 60)
+	msg.set_anchors_preset(Control.PRESET_CENTER)
+	msg.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	msg.grow_vertical = Control.GROW_DIRECTION_BOTH
+	turn.add_child(msg)
+	add_child(turn)
+	var check := func(): var s := get_viewport().get_visible_rect().size; turn.visible = s.y > s.x
+	get_viewport().size_changed.connect(check)
+	check.call()
+
 
 # ---------------------------------------------------------------- screens
 
