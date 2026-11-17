@@ -36,7 +36,7 @@ var build := ""           # server build id; a different one after reconnect mea
 var f_black: FontVariation
 var f_bold: FontVariation
 var f_mid: FontVariation
-var f_mono: Font
+var f_mono: FontVariation
 var stage: Control
 var hud_code: Label
 var hud_url: Label
@@ -55,7 +55,8 @@ func _ready() -> void:
 	f_black = _font(800, 80)
 	f_bold = _font(700, 90)
 	f_mid = _font(500, 100)
-	f_mono = load("res://fonts/IBMPlexMono-Medium.ttf")
+	f_mono = _font(700, 78)  # small labels: the headline face, condensed and spaced
+	f_mono.spacing_glyph = 2
 	_build_frame()
 	ws.connect_to_url(server_url)
 	_render()
@@ -174,7 +175,7 @@ func _label(s: String, size: int, col := INK, font: Font = null, width := 0.0, a
 
 
 func _mono(s: String, size := 22, col := INK) -> Label:
-	return _label(s.to_upper(), size, col, f_mono)
+	return _label(s.to_upper(), int(size * 1.1), col, f_mono)
 
 
 func _box(bg: Color, pad := 28, shadow := 10, border := 4) -> PanelContainer:
@@ -271,7 +272,7 @@ func _build_frame() -> void:
 
 	# riso "tape" strips peeking in from the corners of the 16:9 frame
 	var deco := _frame()
-	for t in [[PINK, Vector2(-160, 1110), -24.0], [BLUE, Vector2(1580, 1120), -24.0]]:
+	for t in [[PINK, Vector2(-300, 1190), -24.0], [BLUE, Vector2(1580, 1120), -24.0]]:
 		var tape := _rect(t[0], Vector2(520, 70))
 		tape.position = t[1]
 		tape.rotation_degrees = t[2]
@@ -292,7 +293,7 @@ func _build_frame() -> void:
 	hud.add_child(hud_round)
 
 	hud_url = _mono("", 22)
-	hud_code = _label("····", 52, INK, f_mono)
+	hud_code = _label("····", 56, INK, f_black)
 	var code_box := _box(YELLOW, 14, 6, 3)
 	code_box.add_child(_col([_mono("Handy → " , 18), hud_url, hud_code], 0))
 	code_box.rotation_degrees = 1.5
@@ -352,38 +353,38 @@ func _draw_lobby() -> void:
 		_label("Sag was", 150, INK, f_black),
 		_label("Harmloses.", 150, INK, f_black),
 	], -40)
-	_put(title, Vector2(560, 330), -2.0, 0, not seen.has("title"))
+	_put(title, Vector2(500, 280), -2.0, 0, not seen.has("title"))
 	var sub := _box(PINK, 20, 8)
 	sub.add_child(_label("Wir machen's schlimm.", 54, WHITE, f_black))
-	_put(sub, Vector2(520, 530), 2.5, 0.08, not seen.has("title"))
-	seen["title"] = true
+	_put(sub, Vector2(470, 490), 2.5, 0.08, not seen.has("title"))
 
-	var qr := _box(WHITE, 10, 8, 4)
+	# join card: QR on the left, link and copy button beside it
+	var qr := _box(WHITE, 8, 0, 3)
 	var tr := TextureRect.new()
 	tr.texture = qr_tex
-	tr.custom_minimum_size = Vector2(250, 250)
+	tr.custom_minimum_size = Vector2(210, 210)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	qr.add_child(tr)
-	_put(qr, Vector2(250, 820), -1.5, 0, false)
+	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy, INK, 26)
+	var join := _box(YELLOW, 22, 10)
+	join.add_child(_row([qr, _col([_mono("Mit dem Handy beitreten", 20),
+		_label(join_link.replace("http://", "").replace("https://", ""), 34, INK, f_black, 400),
+		_rect(Color.TRANSPARENT, Vector2(1, 4)), copy], 8)], 26))
+	_put(join, Vector2(490, 705), -1.0, 0.12, not seen.has("title"))
+	seen["title"] = true
 
 	var phone: bool = v.phoneMode
-	var copy := _button("Kopiert!" if _now() < copied_until else "Link kopieren", _on_copy)
-	var mode := _button("Modus: Alle am Handy" if phone else "Modus: Großer Bildschirm", _on_mode, YELLOW)
+	var mode := _button("Modus: Alle am Handy" if phone else "Modus: Großer Bildschirm", _on_mode, WHITE, 24)
 	var origin := _button("Original-Frage: %s" % ("an" if v.showOrigin else "aus"), _on_origin, WHITE, 24)
 	var rounds := _button("Runden: %d" % v.rounds, _on_rounds, WHITE, 24)
 	var same := _button("Vorlagen: %s" % ("gleich für alle" if v.sameFormat else "gemischt"), _on_same, WHITE, 24)
 	var side := _col([
-		_mono("Scannen oder öffnen", 20),
-		_label(join_link.replace("http://", "").replace("https://", ""), 30, INK, f_mono),
-		copy,
-		_rect(Color.TRANSPARENT, Vector2(1, 8)),
-		mode,
-		_row([rounds, origin], 12),
-		same,
-		_mono("Auflösung auch auf jedem Handy" if phone else "Auflösung nur hier auf dem Bildschirm", 16),
-	], 10)
-	_put(side, Vector2(700, 800), 0, 0, false)
+		_mono("Einstellungen · " + ("Auflösung auf jedem Handy" if phone else "Auflösung hier auf dem Bildschirm"), 18),
+		_row([mode, rounds], 14),
+		_row([origin, same], 14),
+	], 14)
+	_put(side, Vector2(490, 950), 0, 0, false)
 
 	var n := order.size()
 	var slots := clampi(n, 8, 20)

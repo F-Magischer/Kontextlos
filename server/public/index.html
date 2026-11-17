@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#EFE7D6">
 <title>KONTEXTLOS</title>
+<link rel="preload" href="fonts/BricolageGrotesque.ttf" as="font" type="font/ttf" crossorigin>
 <style>
-@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; }
-@font-face { font-family: "Plex"; src: url("fonts/IBMPlexMono-Medium.ttf"); }
+@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; font-display: block; }
+@font-face { font-family: "Plex"; src: url("fonts/IBMPlexMono-Medium.ttf"); font-display: block; }
 :root { --paper:#EFE7D6; --ink:#1B1A17; --pink:#FF4F79; --blue:#2B59C3; --yellow:#FFD23F; --white:#FFFDF7; --me:var(--pink); }
 * { box-sizing: border-box; margin: 0; }
 html, body { background: var(--paper); color: var(--ink); }
@@ -24,11 +25,11 @@ body::after { background: var(--blue); right: -80px; top: 120px; }
 header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 10px; margin-bottom: 20px; }
 .logo { font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
 .logo span { background: var(--ink); color: var(--paper); padding: 0 5px; }
-.who { display: flex; gap: 6px; align-items: center; font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; }
+.who { display: flex; gap: 6px; align-items: center; font-family: "Brico", sans-serif; font-size: 12px; text-transform: uppercase; }
 .who .code { border: 2px solid var(--ink); padding: 2px 6px; background: var(--yellow); }
 .who b { background: var(--me); color: #fff; padding: 3px 7px; }
 main { flex: 1; display: flex; flex-direction: column; }
-.mono { font-family: "Plex", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.mono { font-family: "Brico", sans-serif; font-size: 14px; text-transform: uppercase; }
 h1 { font-weight: 800; font-size: clamp(40px, 12vw, 64px); line-height: .9; letter-spacing: -.035em; margin: 8px 0 14px; }
 h2 { font-weight: 800; font-size: 28px; line-height: 1.02; letter-spacing: -.02em; margin: 6px 0 14px; }
 p { font-size: 18px; line-height: 1.35; }
@@ -59,11 +60,11 @@ button:disabled { opacity: .35; }
 .err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; border: 3px solid var(--ink); }
 .timer { position: relative; height: 12px; background: rgba(27,26,23,.12); margin: 22px 0 18px; }
 .timer i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
-.timer span { position: absolute; right: 0; top: -20px; font: 13px "Plex", monospace; }
+.timer span { position: absolute; right: 0; top: -20px; font: 13px "Brico", sans-serif; }
 .bigcode { font: 64px/1 "Plex", monospace; letter-spacing: .12em; background: var(--yellow); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 10px 14px; display: inline-block; transform: rotate(-2deg); margin: 6px 0 18px; }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 22px; }
 .chip { color: #fff; font-weight: 800; font-size: 19px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
-.chip small { font: 10px "Plex", monospace; display: block; opacity: .85; text-transform: uppercase; }
+.chip small { font: 11px "Brico", sans-serif; display: block; opacity: .85; text-transform: uppercase; }
 .wait { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 18px; padding-bottom: 60px; }
 .wait .sticker { font-size: clamp(34px, 10vw, 54px); padding: 12px 18px; background: var(--me); animation: wobble 3s ease-in-out infinite; }
 .dots span { display: inline-block; width: 12px; height: 12px; background: var(--ink); margin-right: 8px; animation: bounce 1s infinite; }
@@ -79,35 +80,53 @@ button:disabled { opacity: .35; }
 .mrow b, .mrow s { flex: 1; font-size: 19px; }
 .tiny { width: auto; margin: 0; padding: 6px 10px; font-size: 15px; box-shadow: 3px 3px 0 var(--ink); }
 .sticker.win { display: block; width: fit-content; margin: 2px 0 6px; font-size: 18px; background: var(--yellow); color: var(--ink); }
-.row .pts { font-family: "Plex", monospace; font-size: 16px; min-width: 46px; text-align: right; }
-.row .gain { color: var(--pink); font-family: "Plex", monospace; font-size: 13px; min-width: 48px; text-align: right; }
+.row .pts { font-family: "Brico", sans-serif; font-size: 16px; min-width: 46px; text-align: right; }
+.row .gain { color: var(--pink); font-family: "Brico", sans-serif; font-size: 13px; min-width: 48px; text-align: right; }
 .stamp { display: inline-block; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 18px; padding: 4px 10px; transform: rotate(-3deg); margin-bottom: -4px; position: relative; z-index: 1; }
 .stamp.top { background: var(--pink); color: #fff; }
 .place { font-weight: 800; font-size: 120px; line-height: .9; letter-spacing: -.05em; }
 .opt { display: block; width: 100%; padding: 0; background: none; border: 0; box-shadow: none; margin: 0 0 22px; text-align: left; color: var(--ink); font: inherit; }
 .opt:active { transform: scale(.98); box-shadow: none; }
 .optxt { display: block; text-align: left; font: 700 19px/1.25 "Brico", system-ui, sans-serif; background: var(--white); color: var(--ink); box-shadow: 4px 4px 0 var(--ink); margin: 0 0 14px; }
-.optxt small { display: block; font: 12px "Plex", monospace; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
+.optxt small { display: block; font: 13px "Brico", sans-serif; text-transform: uppercase; margin-bottom: 4px; color: var(--blue); }
+/* small labels: the headline face, condensed and spaced, instead of a typewriter mono */
+.who, .mono, .timer span, .chip small, .row .pts, .row .gain, .optxt small, .post .bar, .post .lbl { font-weight: 700; font-stretch: 78%; letter-spacing: .08em; }
 
 /* animation */
+@keyframes rise { from { transform: translateY(22px) rotate(var(--r, 0deg)); opacity: 0; } to { transform: rotate(var(--r, 0deg)); opacity: 1; } }
+@keyframes stamp { 0% { transform: scale(1.25) rotate(-4deg); opacity: 0; } 55% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+body:not(.ready) .wrap { visibility: hidden; } /* no flash of fallback fonts */
 @keyframes slap { from { transform: scale(1.3) rotate(var(--r, -1deg)); opacity: 0; } 60% { opacity: 1; } to { transform: scale(1) rotate(var(--r, -1deg)); opacity: 1; } }
 @keyframes drop { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes wobble { 0%, 100% { transform: rotate(2deg); } 50% { transform: rotate(-2deg) scale(1.03); } }
 @keyframes bounce { 0%, 100% { transform: none; } 40% { transform: translateY(-8px); } }
 @keyframes grow { from { transform: scaleX(0); } }
-.in > * { animation: drop .35s cubic-bezier(.2,.9,.2,1) both; }
-.in > *:nth-child(2) { animation-delay: .05s; } .in > *:nth-child(3) { animation-delay: .1s; } .in > *:nth-child(4) { animation-delay: .15s; }
-.in > *:nth-child(5) { animation-delay: .2s; } .in > *:nth-child(n+6) { animation-delay: .25s; }
+.in > * { animation: rise .5s cubic-bezier(.16,1,.3,1) both; }
+.in > *:nth-child(2) { animation-delay: .06s; } .in > *:nth-child(3) { animation-delay: .12s; } .in > *:nth-child(4) { animation-delay: .18s; }
+.in > *:nth-child(5) { animation-delay: .24s; } .in > *:nth-child(n+6) { animation-delay: .3s; }
+/* start page: headline stamps down, sticker and demo follow, form rises in beside it */
+.start > div { animation: none !important; }
+.start h1 { animation: stamp .55s cubic-bezier(.2,1.3,.4,1) both; }
+.start .sticker { animation: slap .45s .25s cubic-bezier(.2,1.4,.4,1) both; --r: 2deg; }
+.start .demo { animation: rise .6s .4s cubic-bezier(.16,1,.3,1) both; --r: -1.5deg; }
+.start > div:last-child > * { animation: rise .5s cubic-bezier(.16,1,.3,1) both; }
+.start > div:last-child > :nth-child(2) { animation-delay: .08s; } .start > div:last-child > :nth-child(3) { animation-delay: .14s; }
+.start > div:last-child > :nth-child(n+4) { animation-delay: .2s; }
+.demo { display: none; }
+.how { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+.how span { background: var(--white); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 10px; font-weight: 800; font-size: 17px; }
+.how b { color: var(--pink); margin-right: 6px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 .slap { animation: slap .4s cubic-bezier(.2,1.4,.4,1) both !important; }
 
 /* fake internet posts: same layouts as the big screen */
 .post { --r: -1deg; background: var(--white); border: 3px solid var(--ink); box-shadow: 7px 7px 0 var(--ink); margin: 6px 0 24px; transform: rotate(var(--r)); text-align: left; overflow: hidden; }
 .post .pad { padding: 16px; }
-.post .bar { background: var(--ink); color: var(--paper); padding: 8px 16px; font: 11px "Plex", monospace; text-transform: uppercase; letter-spacing: .08em; }
+.post .bar { background: var(--ink); color: var(--paper); padding: 8px 16px; font: 13px "Brico", sans-serif; text-transform: uppercase; letter-spacing: .08em; }
 .post h3 { font-weight: 800; font-size: 29px; line-height: 1.02; letter-spacing: -.025em; margin: 4px 0 10px; }
 .post .a { font-size: 23px; font-weight: 600; line-height: 1.2; }
 .post .who { font: 800 17px "Brico", system-ui, sans-serif; display: block; margin-bottom: 2px; }
-.post .lbl { font: 12px "Plex", monospace; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; opacity: .75; }
+.post .lbl { font: 13px "Brico", sans-serif; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; opacity: .75; }
 .post.stage1 .an { visibility: hidden; }
 .post.stage2 .an { animation: drop .4s cubic-bezier(.2,.9,.2,1) both; }
 .qa { padding: 12px 16px; border-top: 2px dashed rgba(27,26,23,.35); }
@@ -133,7 +152,11 @@ textarea.slot {
 textarea.slot:focus { animation: none; background: rgba(255,79,121,.08); }
 /* landscape tablets, laptops, TVs: wider page, centred column, side-by-side where it helps */
 @media (min-width: 900px) and (min-aspect-ratio: 1/1) {
-  .wrap { max-width: 1240px; padding-left: 48px; padding-right: 48px; }
+  /* --z (set by script) scales the whole page up to fill big screens instead of leaving wide empty margins */
+  .wrap { max-width: 1240px; padding-left: 40px; padding-right: 40px; zoom: var(--z, 1); min-height: calc(100dvh / var(--z, 1)); }
+  .demo { display: block; margin-top: 34px; max-width: 520px; }
+  body::before { width: 520px; height: 64px; left: -120px; bottom: 70px; }
+  body::after { width: 520px; height: 64px; right: -140px; top: 160px; }
   main { width: 100%; max-width: 760px; margin: 0 auto; }
   main.start { max-width: none; display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 80px; align-content: center; padding-bottom: 6vh; }
   main.start h1 { font-size: clamp(64px, 8vw, 128px); }
@@ -150,6 +173,10 @@ textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font
 </div>
 <script>
 const $ = (s) => document.querySelector(s);
+// big landscape screens: scale the page so it fills the window (only applied by the wide-screen CSS)
+const fit = () => document.documentElement.style.setProperty("--z", Math.max(1, Math.min(innerWidth / 1240, innerHeight / 820)).toFixed(3));
+fit(); addEventListener("resize", fit);
+Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]).then(() => document.body.classList.add("ready"));
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const devId = () => { let d = store.get("kl_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("kl_dev", d); } return d; };
@@ -183,7 +210,11 @@ function startScreen(err) {
   app.className = "in start";
   app.innerHTML = `
     <div><h1>Sag was<br>Harmloses.</h1>
-    <div><span class="sticker">Wir machen's schlimm.</span></div></div>
+    <div><span class="sticker">Wir machen's schlimm.</span></div>
+    <div class="demo"><div class="post" style="margin:0"><div class="bar">Polizeiverhör · Protokoll</div>
+      <div class="qa"><span class="lbl">Kommissarin</span><h3>Wo genau haben Sie die Leiche versteckt?</h3></div>
+      <div class="qa"><span class="lbl">Verdächtige</span><span class="who" style="color:var(--blue)">Lena</span><div class="a">„Unterm Bett, da guckt eh nie jemand.“</div></div></div>
+      <div class="how"><span><b>1</b>Ehrlich antworten</span><span><b>2</b>Fremde Antwort verdrehen</span><span><b>3</b>Das Schlimmste wählen</span></div></div></div>
     <div>${err ? `<div class="err">${esc(err)}</div>` : ""}
     <div class="field" style="margin-top:28px"><label class="mono" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("kl_name") || "")}"></div>
     <div class="field"><label class="mono" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
