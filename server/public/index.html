@@ -18,9 +18,9 @@ body {
   -webkit-tap-highlight-color: transparent; overflow-x: hidden;
 }
 /* riso tape in the corners, like the big screen */
-body::before, body::after { content: ""; position: fixed; width: 360px; height: 48px; transform: rotate(-24deg); z-index: 0; pointer-events: none; opacity: .92; }
-body::before { background: var(--pink); left: -90px; bottom: 60px; }
-body::after { background: var(--blue); right: -110px; top: 140px; }
+body::before, body::after { content: ""; position: fixed; width: 300px; height: 44px; transform: rotate(-24deg); z-index: 0; pointer-events: none; opacity: .92; }
+body::before { background: var(--pink); left: -150px; bottom: 34px; }
+body::after { background: var(--blue); right: -150px; bottom: 34px; }
 .wrap { max-width: 560px; margin: 0 auto; padding: max(14px, env(safe-area-inset-top)) 18px 40px; min-height: 100dvh; display: flex; flex-direction: column; position: relative; z-index: 1; }
 header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 10px; margin-bottom: 20px; }
 .logo { font-weight: 800; font-size: 26px; letter-spacing: -.02em; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; transition: transform .12s; }
@@ -59,14 +59,22 @@ button:disabled { opacity: .35; }
 .small { font-size: 17px; padding: 11px; }
 .or { display: flex; align-items: center; gap: 10px; margin: 26px 0 10px; } .or::before, .or::after { content: ""; flex: 1; border-top: 2px dashed var(--ink); }
 .err { background: var(--pink); color: #fff; padding: 10px 12px; margin-bottom: 14px; font-weight: 700; border: 3px solid var(--ink); }
-.timer { position: relative; height: 12px; background: rgba(27,26,23,.12); margin: 22px 0 18px; }
+.timer { position: relative; height: 20px; background: var(--white); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); margin: 26px 0 22px; }
+.timer.low i { background: var(--pink); }
+.timer.low span { background: var(--pink); animation: wobble .5s ease-in-out infinite; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 16px; }
+.tg { font: 700 14px "Brico", sans-serif; font-stretch: 78%; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border: 2.5px solid var(--ink); background: var(--white); }
+.tg.t0 { background: var(--ink); color: var(--paper); }
+.tg.t1 { background: var(--me); color: #fff; transform: rotate(-1.5deg); box-shadow: 2px 2px 0 var(--ink); }
+.tg.t2 { background: var(--yellow); }
 .timer i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
-.timer span { position: absolute; right: 0; top: -20px; font: 13px "Brico", sans-serif; }
+.timer span { position: absolute; right: -8px; top: -22px; font: 800 16px "Brico", sans-serif; background: var(--ink); color: var(--paper); padding: 2px 9px; transform: rotate(3deg); }
 .bigcode { font: 64px/1 "Plex", monospace; letter-spacing: .12em; background: var(--yellow); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 10px 14px; display: inline-block; transform: rotate(-2deg); margin: 6px 0 18px; }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 22px; }
 .chip { color: #fff; font-weight: 800; font-size: 19px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
 .chip small { font: 11px "Brico", sans-serif; display: block; opacity: .85; text-transform: uppercase; }
-.wait { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 18px; padding-bottom: 60px; }
+.wait { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 22px; padding-bottom: 70px; }
+.wait p { font-size: 20px; font-weight: 600; max-width: 30ch; }
 .wait .sticker { font-size: clamp(34px, 10vw, 54px); padding: 12px 18px; background: var(--me); animation: wobble 3s ease-in-out infinite; }
 .dots span { display: inline-block; width: 12px; height: 12px; background: var(--ink); margin-right: 8px; animation: bounce 1s infinite; }
 .dots span:nth-child(2) { animation-delay: .15s; } .dots span:nth-child(3) { animation-delay: .3s; }
@@ -157,7 +165,7 @@ textarea.slot:focus { animation: none; background: rgba(255,79,121,.08); }
   .wrap { max-width: 1240px; padding-left: 40px; padding-right: 40px; zoom: var(--z, 1); min-height: calc(100dvh / var(--z, 1)); }
   .demo { display: flex; margin-top: 34px; max-width: 560px; }
   body::before { width: 520px; height: 64px; left: -120px; bottom: 70px; }
-  body::after { width: 520px; height: 64px; right: -140px; top: 160px; }
+  body::after { width: 520px; height: 64px; right: -140px; bottom: 70px; top: auto; }
   main { width: 100%; max-width: 760px; margin: 0 auto; }
   main.start { max-width: none; display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 80px; align-content: center; padding-bottom: 6vh; }
   main.start h1 { font-size: clamp(64px, 8vw, 128px); }
@@ -247,12 +255,14 @@ function timer(sec, onEnd) {
     const left = Math.max(0, end - performance.now());
     if (bar) bar.style.transform = `scaleX(${left / total})`;
     if (num) num.textContent = Math.ceil(left / 1000) + " s";
+    if (bar) bar.parentNode.classList.toggle("low", left < 10000);
     if (left > 0) timerRAF = requestAnimationFrame(tick);
   };
   tick();
   if (onEnd) endTimer = setTimeout(onEnd, sec * 1000);
 }
 const timerHTML = `<div class="timer"><i></i><span></span></div>`;
+const tagHTML = (tag) => `<div class="tags">${String(tag).split(" · ").map((p, i) => `<span class="tg t${Math.min(i, 2)}">${esc(p)}</span>`).join("")}</div>`;
 
 // One fake internet post. edit=true turns the twist into a text field right where it will appear.
 function post(p, { edit = false, stage = 2, placeholder = "", max = 70, r = -1 } = {}) {
@@ -328,13 +338,13 @@ function show(d) {
     if (sentKey === d.key) return waitScreen("Abgeschickt.", "Warte auf die anderen …");
     const max = d.max || 80;
     app.innerHTML = d.post
-      ? `<p class="mono">${esc(d.tag)}</p><h2>${d.qword ? "Stell die Frage, auf die diese Antwort passt." : "Wie geht der Satz weiter?"}</h2>
+      ? `${tagHTML(d.tag)}<h2>${d.qword ? "Stell die Frage, auf die diese Antwort passt." : "Wie geht der Satz weiter?"}</h2>
          ${d.qword ? `<div class="card prompt" style="--r:.8deg;padding:10px 14px;margin:0 0 6px"><span class="mono">Tipp</span>
            <p style="font-weight:700">Die Antwort passt auf eine <b>${esc(d.qword)}</b>-Frage. Der Anfang steht schon drin.</p>${d.qhint ? `<p style="font-size:15px;margin-top:4px">${esc(d.qhint)}</p>` : ""}</div>` : ""}
          ${timerHTML}
          <div class="slap">${post(d.post, { edit: true, placeholder: d.placeholder, max })}</div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`
-      : `<p class="mono">${esc(d.tag)}</p>${timerHTML}
+      : `${tagHTML(d.tag)}${timerHTML}
          <div class="card prompt slap" style="--r:-1.2deg"><span class="mono">${esc(d.label || "Ehrliche Frage")}</span><div class="q">${esc(d.title)}</div></div>
          <div class="field"><textarea id="txt" maxlength="${max}" placeholder="${esc(d.placeholder || "")}"></textarea></div>
          <div class="count mono" id="cnt">0/${max}</div><button id="send">Abschicken</button>`;
@@ -351,7 +361,7 @@ function show(d) {
 
   } else if (d.s === "vote") {
     if (sentKey === d.key) return waitScreen("Stimme gezählt.", "Mal sehen, wer gewinnt …");
-    app.innerHTML = `<p class="mono">Abstimmung</p><h2>${esc(d.title)}</h2>${timerHTML}` +
+    app.innerHTML = `${tagHTML("Abstimmung")}<h2>${esc(d.title)}</h2>${timerHTML}` +
       d.options.map((o, i) => d.full && o.post
         ? `<button class="opt" data-i="${o.i}">${post(o.post, { r: tilt(i) })}</button>`
         : `<button class="optxt" data-i="${o.i}"><small>${esc(o.tag)}</small>${esc(o.text)}</button>`).join("");
@@ -362,25 +372,25 @@ function show(d) {
   } else if (d.s === "reveal") {
     const same = prev.s === "reveal" && prev.tag === d.tag; // stage change: keep the card still, let the answer drop in
     if (same) app.className = "";
-    app.innerHTML = `<p class="mono">${esc(d.tag)}</p><div class="${same ? "" : "slap"}" style="margin-top:14px">${post(d.post, { stage: d.stage })}</div>`;
+    app.innerHTML = `${tagHTML(d.tag)}<div class="${same ? "" : "slap"}" style="margin:auto 0">${post(d.post, { stage: d.stage })}</div>`;
 
   } else if (d.s === "results") {
     const top = Math.max(...d.items.map((it) => it.votes));
     const items = [...d.items].sort((a, b) => b.votes - a.votes);
     app.classList.add("cols");
-    app.innerHTML = `<p class="mono">Auszählung</p><h1>Wer war das?</h1>` + items.map((it, i) =>
+    app.innerHTML = `${tagHTML("Auszählung")}<h1>Wer war das?</h1>` + items.map((it, i) =>
       `<div class="res"><span class="stamp ${it.votes === top && top > 0 ? "top" : ""}">${it.votes} ${it.votes === 1 ? "Stimme" : "Stimmen"} · verdreht von ${esc(it.post.twister)}</span>${i === 0 && top > 0 ? `<span class="sticker win">Bester Post der Runde</span>` : ""}${post(it.post, { r: tilt(i) })}</div>`).join("");
 
   } else if (d.s === "scores") {
     const best = Math.max(1, ...d.rows.map((r) => r.score));
-    app.innerHTML = `<p class="mono">Punktestand</p><h1>${esc(d.title)}</h1>
+    app.innerHTML = `${tagHTML("Punktestand")}<h1>${esc(d.title)}</h1>
       ${d.gain > 0 ? `<div><span class="sticker">+${d.gain} für dich</span></div>` : ""}
       <div class="card" style="margin-top:22px">${d.rows.map((r, i) => `<div class="row"><span class="mono">${i + 1}</span><span class="nm">${esc(r.name)}</span>
         <span class="track"><span class="sbar" style="background:${esc(r.color)};width:${Math.max(2, 100 * r.score / best)}%;animation-delay:${.1 + i * .05}s"></span></span>
         <span class="pts">${r.score}</span><span class="gain">${r.gain > 0 ? "+" + r.gain : ""}</span></div>`).join("")}</div>`;
 
   } else if (d.s === "end") {
-    app.innerHTML = `<div class="wait"><p class="mono">Ende</p><div class="place slap">#${d.place}</div>
+    app.innerHTML = `<div class="wait">${tagHTML("Spiel vorbei")}<div class="place slap">#${d.place}</div>
       <span class="sticker">${d.place === 1 ? "Du gewinnst!" : esc(d.text)}</span>
       ${d.place === 1 ? `<p>${esc(d.text)}</p>` : ""}
       ${d.vip ? `<button id="again" style="margin-top:20px">Nochmal spielen</button>` : ""}</div>`;
