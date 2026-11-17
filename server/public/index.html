@@ -70,6 +70,15 @@ button:disabled { opacity: .35; }
 .timer i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; }
 .timer span { position: absolute; right: -8px; top: -22px; font: 800 16px "Brico", sans-serif; background: var(--ink); color: var(--paper); padding: 2px 9px; transform: rotate(3deg); }
 .bigcode { font: 64px/1 "Plex", monospace; letter-spacing: .12em; background: var(--yellow); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 10px 14px; display: inline-block; transform: rotate(-2deg); margin: 6px 0 18px; }
+.joinbox { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: var(--yellow); transform: rotate(-.8deg); padding: 14px; margin-top: 0; }
+.joinbox .bigcode { display: inline-block; width: auto; font-size: 40px; padding: 8px 10px; margin: 6px 0 8px; background: var(--white); color: var(--ink); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; }
+.joinbox .bigcode:active { transform: translate(3px,3px) rotate(-2deg); box-shadow: 1px 1px 0 var(--ink); }
+#copied.ok { background: var(--ink); color: var(--paper); padding: 2px 6px; }
+.joinbox > div:first-child { display: flex; flex-direction: column; align-items: flex-start; }
+.joinbox .jr { display: flex; flex-direction: column; align-items: stretch; }
+.joinbox .qr { width: 156px; height: 156px; display: block; border: 3px solid var(--ink); background: #fff; image-rendering: pixelated; }
+.joinbox #share { margin-top: 10px; font-size: 16px; padding: 9px; }
+.chip.free { background: transparent; color: rgba(27,26,23,.4); border-style: dashed; box-shadow: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 22px; }
 .chip { color: #fff; font-weight: 800; font-size: 19px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
 .chip small { font: 11px "Brico", sans-serif; display: block; opacity: .85; text-transform: uppercase; }
@@ -303,9 +312,14 @@ function show(d) {
     const known = prev.s === "lobby" ? new Set((prev.players || []).map((p) => p.name)) : new Set();
     const chips = d.players.map((p, i) => `<span class="chip ${known.has(p.name) ? "" : "slap"}" style="background:${esc(p.color)};--r:${tilt(i)}deg;transform:rotate(${tilt(i)}deg)"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("");
     if (prev.s === "lobby") app.className = ""; // only new chips animate
-    app.innerHTML = `<p class="mono">Raumcode</p><div><span class="bigcode">${esc(d.code)}</span></div>
-      <p class="mono">${d.count} von max. ${d.max} dabei · ${d.phoneMode ? "Auflösung auf allen Handys" : "Auflösung auf dem großen Bildschirm"}</p>
-      <div class="chips">${chips}</div>
+    const free = Array(Math.max(0, 4 - d.players.length)).fill(`<span class="chip free"><small>Platz</small>frei</span>`).join("");
+    app.innerHTML = `<div class="card joinbox">
+        <div><span class="mono">Raumcode</span><button id="copycode" class="bigcode" title="Code kopieren">${esc(d.code)}</button>
+          <span class="mono" id="copied">Antippen zum Kopieren</span></div>
+        <div class="jr"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button id="share" class="small">Link teilen</button></div>
+      </div>
+      <div class="tags"><span class="tg t0">${d.count} / ${d.max} dabei</span><span class="tg t2">${d.phoneMode ? "Auflösung auf allen Handys" : "Auflösung auf dem großen Bildschirm"}</span></div>
+      <div class="chips">${chips}${free}</div>
       ${d.vip ? `<button id="start" ${can ? "" : "disabled"}>${can ? "Alle da — los!" : `Noch ${d.min - d.count} fehlt`}</button>
         <div class="or mono">Einstellungen</div>
         <p class="mono">Runden</p>
@@ -317,9 +331,12 @@ function show(d) {
         ${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b>
           <button class="ghost tiny" data-kick="${esc(p.id)}">Kicken</button><button class="tiny" data-ban="${esc(p.id)}">Bannen</button></div>`).join("")}
         ${d.banned.map((b) => `<div class="mrow"><s>${esc(b.name)}</s><span class="mono">gebannt</span><button class="ghost tiny" data-unban="${esc(b.dev)}">Entbannen</button></div>`).join("")}` : ""}
-      <div class="or mono">Leute einladen</div>
-      <button id="share" class="ghost small">Link teilen</button>
-      ${d.hasHost ? "" : `<a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
+      ${d.hasHost ? "" : `<div class="or mono">Fernseher oder Laptop?</div><a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
+    $("#copycode").onclick = async () => {
+      try { await navigator.clipboard.writeText(d.code); $("#copied").textContent = "Code kopiert!"; }
+      catch { const t = document.createElement("textarea"); t.value = d.code; document.body.append(t); t.select(); const ok = document.execCommand("copy"); t.remove(); $("#copied").textContent = ok ? "Code kopiert!" : "Kopieren nicht möglich"; }
+      $("#copied").classList.add("ok");
+    };
     if (d.vip) {
       $("#start").onclick = () => out({ a: "start" });
       $("#same").onclick = () => out({ a: "set", key: "sameFormat", value: !d.sameFormat });

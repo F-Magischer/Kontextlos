@@ -102,8 +102,7 @@ wss.on("connection", (ws) => {
     if (!role && m.t === "host") {
       const existing = typeof m.code === "string" && rooms.get(m.code);
       room = existing && !existing.host ? existing : newRoom();
-      // a big screen joining a room in the lobby takes over the reveal; it can switch back to phones
-      if (existing && room === existing && room.phase === "lobby") room.phoneMode = false;
+      // reveal stays on the phones by default; the big screen can switch it to itself in the lobby
       room.host = ws; role = "host";
       clearTimeout(room.cleanup);
       send(ws, { t: "room", code: room.code, url: room.link, build: BUILD });

@@ -16,7 +16,7 @@ const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math
 const clean = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
 function createRoom(code, link) {
-  return { code, link, host: null, players: new Map(), order: [], phoneMode: false, phase: "lobby", round: 0,
+  return { code, link, host: null, players: new Map(), order: [], phoneMode: true, phase: "lobby", round: 0,
     showOrigin: false, rounds: 5, sameFormat: false, fmtOrder: [], banned: new Map(), posts: [], votes: new Map(), used: new Set(), gen: 0, deadline: 0, len: 0, graceMs: 0, beat: null,
     counts: [], gains: {}, timers: [], cleanup: null };
 }
