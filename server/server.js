@@ -6,6 +6,7 @@ const os = require("os");
 const { WebSocketServer } = require("ws");
 const QRCode = require("qrcode");
 const G = require("./game");
+const S = require("./stats");
 
 const PORT = Number(process.env.PORT) || 8080;
 // changes on every deploy; open pages compare it and reload so they never run old code against a new server
@@ -26,6 +27,7 @@ function lanUrl() {
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  if (p === "/data") return S.page(req, res, live()).catch((e) => { console.error(e); res.writeHead(500).end("Fehler: " + e.message); });
   const qr = p.match(/^\/qr\/([A-Z]{4})\.png$/);
   if (qr) {
     QRCode.toBuffer(`${lanUrl()}/?code=${qr[1]}`, { type: "png", margin: 1, scale: 10, color: { dark: "#1B1A17", light: "#FFFDF7" } })
@@ -58,6 +60,18 @@ function newRoom() {
   rooms.set(c, r);
   return r;
 }
+// concurrent users right now; sampled once a minute while anyone plays
+function live() {
+  let players = 0, n = 0;
+  for (const r of rooms.values()) {
+    const on = [...r.players.values()].filter((p) => p.online).length;
+    players += on;
+    if (on || r.host) n++;
+  }
+  return { players, rooms: n };
+}
+setInterval(() => { const l = live(); if (l.players) S.log("ccu", null, null, l); }, 60 * 1000).unref();
+
 const send = (ws, obj) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
 const rid = () => Math.random().toString(36).slice(2, 10);
 
@@ -77,6 +91,7 @@ wss.on("connection", (ws) => {
     room = r; role = "player";
     send(ws, { t: "joined", build: BUILD, id: pid, code: r.code, name });
     G.addPlayer(r, pid, name, ws, dev);
+    S.log("join", r.code, dev, { name, phoneMode: r.phoneMode, phase: r.phase });
   };
 
   ws.on("message", (raw) => {

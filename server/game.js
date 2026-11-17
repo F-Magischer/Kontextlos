@@ -1,6 +1,7 @@
 // Game rules and flow. Runs on the server so nothing stalls when a browser tab is hidden.
 // Phones get small per-player screens ({s: ...}); the optional big screen gets a full "view" snapshot.
 const C = require("./content");
+const S = require("./stats");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
 const ROUND_CHOICES = [3, 5, 7, 9];
@@ -187,6 +188,7 @@ function kick(r, id, ban) {
   const p = r.players.get(id);
   if (!p) return;
   if (ban) r.banned.set(p.dev || "name:" + p.name.toLowerCase(), p.name);
+  S.log(ban ? "ban" : "kick", r.code, p.dev, { name: p.name, phase: r.phase });
   const ws = p.ws;
   p.ws = null;
   p.online = false;
@@ -228,6 +230,7 @@ function startGame(r) {
   r.round = 0;
   r.used.clear();
   r.fmtOrder = shuffle([...C.FORMATS]);
+  S.log("game_start", r.code, null, { players: online(r).length, phoneMode: r.phoneMode, rounds: r.rounds, sameFormat: r.sameFormat, showOrigin: r.showOrigin });
   nextRound(r);
 }
 
@@ -254,7 +257,7 @@ function nextRound(r) {
 }
 
 function endAnswer(r) {
-  for (const p of r.posts) if (!p.answer) p.answer = pick(C.NO_ANSWER);
+  for (const p of r.posts) if (!p.answer) { p.answer = pick(C.NO_ANSWER); p.noAnswer = true; }
   setPhase(r, "twist", T.twist, T.grace);
   for (const p of r.posts) {
     // the twister sees the answer in its new context, never the question behind it
@@ -270,7 +273,7 @@ function endAnswer(r) {
 }
 
 async function reveal(r) {
-  for (const p of r.posts) if (!p.twist) p.twist = p.fmt.fallback;
+  for (const p of r.posts) if (!p.twist) { p.twist = p.fmt.fallback; p.noTwist = true; }
   setPhase(r, "reveal");
   r.beat = { title: true };
   for (const id of r.order)
@@ -321,6 +324,8 @@ async function endVote(r) {
     r.gains[p.answerer] += r.counts[i] * PTS_PITY * mult(r);
   });
   for (const id of r.order) r.players.get(id).score += r.gains[id];
+  r.posts.forEach((p, i) => S.log("post", r.code, r.players.get(p.answerer).dev, { round: r.round, players: r.posts.length, fmt: p.fmt.name, prompt: p.prompt,
+    answer: p.answer, twist: p.twist, votes: r.counts[i], noAnswer: !!p.noAnswer, noTwist: !!p.noTwist, twisterDev: r.players.get(p.twister).dev }));
   // only now is it revealed who twisted what
   const items = r.posts.map((p, i) => ({ post: payload(r, p), votes: r.counts[i] }));
   for (const id of r.order)
@@ -340,6 +345,7 @@ async function endVote(r) {
 
 function endGame(r) {
   setPhase(r, "end");
+  S.log("game_end", r.code, null, { players: r.order.length, rounds: r.rounds });
   ranked(r).forEach((id, i) => to(r, id, { s: "end", place: i + 1, text: `${r.players.get(id).score} Punkte`, vip: id === vip(r) }));
   view(r);
 }

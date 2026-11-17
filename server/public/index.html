@@ -181,7 +181,8 @@ function startScreen(err) {
     <button id="go">Mitspielen</button>
     <div class="or mono">oder</div>
     <button id="new" class="ghost">Neuen Raum erstellen</button>
-    <a class="btn ghost small" id="screen" href="${screenHost(code0)}">Als großen Bildschirm öffnen (TV / Beamer)</a>`;
+    <a class="btn ghost small" id="screen" href="${screenHost(code0)}">Als großen Bildschirm öffnen (TV / Beamer)</a>
+    <p class="mono" style="margin-top:22px;opacity:.7;text-transform:none">Hinweis: Antworten und Spielverlauf werden anonym gespeichert, um das Spiel zu verbessern. Keine Konten, keine IP-Adressen.</p>`;
   const codeIn = $("#code");
   codeIn.oninput = () => { $("#screen").href = screenHost(codeIn.value.trim().toUpperCase()); };
   $("#go").onclick = () => {
