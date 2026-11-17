@@ -61,14 +61,22 @@ async function page(req, res, live) {
   }
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
   res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kontextlos – Daten</title>
-<style>body{background:#EFE7D6;color:#1B1A17;font:14px/1.4 "IBM Plex Mono",monospace;margin:0 auto;padding:16px;max-width:1100px}
-h1{font:800 40px system-ui;margin:0 0 8px}h2{background:#2B59C3;color:#fff;display:inline-block;padding:4px 10px;margin:28px 0 8px;box-shadow:4px 4px 0 #1B1A17}
-.big{font-size:20px}.big b{background:#FFD23F;padding:0 6px}div.w{overflow-x:auto}table{border-collapse:collapse;background:#FFFDF7;border:3px solid #1B1A17;width:100%}
-th,td{border-bottom:1px solid #1B1A17;padding:5px 8px;text-align:left;vertical-align:top}th{background:#FF4F79;color:#fff}input{font:inherit;padding:6px;border:3px solid #1B1A17}button{font:inherit;padding:6px 12px;border:3px solid #1B1A17;background:#FFD23F}</style>
+<style>@font-face{font-family:"Brico";src:url("/fonts/BricolageGrotesque.ttf");font-weight:200 800;font-stretch:75% 100%}
+html{background:#EFE7D6 radial-gradient(rgba(27,26,23,.13) 1px,transparent 1.2px) 0 0/7px 7px fixed}
+body{color:#1B1A17;font:500 16px/1.4 "Brico",system-ui,sans-serif;font-stretch:90%;margin:0 auto;padding:14px 18px 40px;max-width:1200px;position:relative;z-index:1}
+html::before,html::after{content:"";position:fixed;width:360px;height:48px;transform:rotate(-24deg);opacity:.92;pointer-events:none}
+html::before{background:#FF4F79;left:-90px;bottom:60px}html::after{background:#2B59C3;right:-110px;top:140px}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1B1A17;padding-bottom:10px;margin-bottom:20px}
+.logo{font-weight:800;font-size:26px;color:#1B1A17;text-decoration:none;letter-spacing:-.02em}.logo span{background:#1B1A17;color:#EFE7D6;padding:1px 7px;margin-right:3px;box-shadow:3px 3px 0 #FF4F79}
+.lbl,th{font-weight:700;font-stretch:78%;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+h2{font-weight:800;font-size:24px;background:#2B59C3;color:#fff;display:inline-block;padding:4px 12px;margin:30px 0 10px;box-shadow:4px 4px 0 #1B1A17;transform:rotate(-1deg)}
+.big{font-size:22px;font-weight:700}.big b{background:#FFD23F;padding:0 8px;border:3px solid #1B1A17}div.w{overflow-x:auto;box-shadow:6px 6px 0 #1B1A17;background:#FFFDF7;border:3px solid #1B1A17}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid rgba(27,26,23,.3);padding:6px 10px;text-align:left;vertical-align:top}th{background:#FF4F79;color:#fff}
+input{font:inherit;padding:8px;border:3px solid #1B1A17;background:#FFFDF7}button{font:800 16px "Brico",sans-serif;padding:8px 14px;border:3px solid #1B1A17;background:#1B1A17;color:#EFE7D6;box-shadow:4px 4px 0 #FF4F79;cursor:pointer}form{margin-bottom:12px}</style>
 <script>// refresh every 30 s without losing scroll position or a search being typed
 setInterval(async () => { if (document.activeElement.tagName === "INPUT") return;
   try { const r = await fetch(location.href, { cache: "no-store" }); if (r.ok) { const d = new DOMParser().parseFromString(await r.text(), "text/html"); document.getElementById("d").replaceWith(d.getElementById("d")); } } catch {} }, 30000);</script>
-<h1>KONTEXTLOS · Daten</h1><div id="d"><p style="opacity:.6">aktualisiert sich alle 30 s · Stand ${new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin" })}</p>${body.replace(/<table>/g, '<div class="w"><table>').replace(/<\/table>/g, "</table></div>")}</div>`);
+<header><a class="logo" href="/"><span>KONTEXT</span>LOS</a><span class="lbl">Spieldaten</span></header><div id="d"><p class="lbl" style="opacity:.6">aktualisiert sich alle 30 s · Stand ${new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin" })}</p>${body.replace(/<table>/g, '<div class="w"><table>').replace(/<\/table>/g, "</table></div>")}</div>`);
 }
 
 module.exports = { log, page };

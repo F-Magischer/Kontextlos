@@ -588,7 +588,7 @@ func _post_card(p: Dictionary, s: float) -> Control:
 func _bar(text: String, bg: Color, fg: Color, size: int, w: float) -> Control:
 	var b := _box(bg, maxi(size / 2, 6), 0, 0)
 	b.custom_minimum_size.x = w
-	b.add_child(_mono(text, size, fg))
+	b.add_child(_label(text.to_upper(), int(size * 1.3), fg, f_black))
 	return b
 
 
