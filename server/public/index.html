@@ -78,6 +78,8 @@ button:disabled { opacity: .35; }
 .joinbox .jr { display: flex; flex-direction: column; align-items: stretch; }
 .joinbox .qr { width: 156px; height: 156px; display: block; border: 3px solid var(--ink); background: #fff; image-rendering: pixelated; }
 .joinbox #share { margin-top: 10px; font-size: 16px; padding: 9px; }
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opts button { margin: 0; font-size: 16px; padding: 11px 6px; }
 .chip.free { background: transparent; color: rgba(27,26,23,.4); border-style: dashed; box-shadow: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 22px; }
 .chip { color: #fff; font-weight: 800; font-size: 19px; padding: 6px 12px; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
@@ -312,7 +314,8 @@ function show(d) {
     const known = prev.s === "lobby" ? new Set((prev.players || []).map((p) => p.name)) : new Set();
     const chips = d.players.map((p, i) => `<span class="chip ${known.has(p.name) ? "" : "slap"}" style="background:${esc(p.color)};--r:${tilt(i)}deg;transform:rotate(${tilt(i)}deg)"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("");
     if (prev.s === "lobby") app.className = ""; // only new chips animate
-    const free = Array(Math.max(0, 4 - d.players.length)).fill(`<span class="chip free"><small>Platz</small>frei</span>`).join("");
+    const left = d.max - d.players.length;
+    const free = left > 0 ? `<span class="chip free"><small>noch ${left} Plätze</small>+ ${left === 1 ? "1 frei" : "bis " + d.max}</span>` : "";
     app.innerHTML = `<div class="card joinbox">
         <div><span class="mono">Raumcode</span><button id="copycode" class="bigcode" title="Code kopieren">${esc(d.code)}</button>
           <span class="mono" id="copied">Antippen zum Kopieren</span></div>
@@ -322,10 +325,9 @@ function show(d) {
       <div class="chips">${chips}${free}</div>
       ${d.vip ? `<button id="start" ${can ? "" : "disabled"}>${can ? "Alle da — los!" : `Noch ${d.min - d.count} fehlt`}</button>
         <div class="or mono">Einstellungen</div>
-        <p class="mono">Runden</p>
-        <div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
-        <button id="same" class="ghost small">Vorlagen: ${d.sameFormat ? "jede Runde gleich für alle" : "gemischt"}</button>
-        <button id="origin" class="ghost small">Original-Frage zeigen: ${d.showOrigin ? "an" : "aus"}</button>`
+        <div class="opts"><button id="mode" class="ghost small">Modus: ${d.phoneMode ? "Alle am Handy" : "Großer Bildschirm"}</button><button id="rounds" class="ghost small">Runden: ${d.rounds}</button>
+        <button id="origin" class="ghost small">Original-Frage: ${d.showOrigin ? "an" : "aus"}</button><button id="same" class="ghost small">Vorlagen: ${d.sameFormat ? "gleich für alle" : "gemischt"}</button></div>
+`
         : `<p class="mono">${d.rounds} Runden · Vorlagen ${d.sameFormat ? "gleich für alle" : "gemischt"}</p><div class="card"><p>Gleich geht's los. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
       ${d.vip && (d.players.length > 1 || d.banned.length) ? `<div class="or mono">Spieler verwalten</div>
         ${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b>
@@ -344,7 +346,8 @@ function show(d) {
       app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
       app.querySelectorAll("[data-ban]").forEach((b) => b.onclick = () => { if (confirm("Wirklich bannen? Die Person kommt nicht mehr in diesen Raum.")) out({ a: "ban", id: b.dataset.ban }); });
       app.querySelectorAll("[data-unban]").forEach((b) => b.onclick = () => out({ a: "unban", dev: b.dataset.unban }));
-      app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "set", key: "rounds", value: Number(b.dataset.rounds) }));
+      $("#rounds").onclick = () => out({ a: "set", key: "rounds", value: d.roundChoices[(d.roundChoices.indexOf(d.rounds) + 1) % d.roundChoices.length] });
+      $("#mode").onclick = () => out({ a: "mode", phone: !d.phoneMode });
     }
     $("#share").onclick = async () => {
       try { if (navigator.share) await navigator.share({ title: "KONTEXTLOS", text: "Spiel mit! Raumcode " + d.code, url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
