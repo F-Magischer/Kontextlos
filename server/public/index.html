@@ -203,11 +203,14 @@ const devId = () => { let d = store.get("kl_dev"); if (!d) { d = Math.random().t
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let ws, me = null, last = null, sentKey = null, timerRAF = 0, endTimer = 0;
 
-function connect(code, name, create = false) {
+let joining = false;
+function connect(code, name, create = false, party = null) {
+  joining = true;
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
-  ws.onopen = () => ws.send(JSON.stringify(create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("kl_pid_" + code) }));
+  ws.onopen = () => ws.send(JSON.stringify(party ? { t: "join", party } : create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("kl_pid_" + code) }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
+    if (m.t === "joined" || m.t === "error") joining = false;
     if (m.t === "joined") {
       if (window.KL_BUILD && m.build !== window.KL_BUILD) return location.reload(); // new version deployed: load it
       window.KL_BUILD = m.build;
@@ -215,7 +218,7 @@ function connect(code, name, create = false) {
       history.replaceState(null, "", "?code=" + m.code);
       $("#who").innerHTML = `<span class="code">${esc(m.code)}</span><b>${esc(m.name)}</b>`;
     }
-    else if (m.t === "error") { me = null; startScreen(m.msg); }
+    else if (m.t === "error") { me = null; startScreen(m.msg); usePartyCode(); }
     else if (m.t === "msg") show(m.d);
   };
   ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
@@ -425,6 +428,30 @@ function show(d) {
 startScreen();
 const q0 = new URLSearchParams(location.search).get("code");
 if (q0 && store.get("kl_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("kl_name") || "");
+
+// FURIDA party overlay: only on the platform domain (local tests: localStorage kl_party = "http://localhost:8090").
+// The overlay hands us a one-time code when our party plays here; we join its room with it.
+const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("kl_party");
+let partyCode = null;
+function usePartyCode() {
+  if (!partyCode || me || joining) return;
+  connect(null, null, false, partyCode);
+  partyCode = null;
+}
+if (PARTY) {
+  const f = document.createElement("iframe");
+  f.src = PARTY + "/overlay";
+  f.title = "Party";
+  f.style.cssText = "position:fixed;left:0;bottom:0;width:0;height:0;border:0;z-index:50;background:transparent;color-scheme:normal";
+  document.body.append(f);
+  addEventListener("message", (e) => {
+    if (e.origin !== PARTY || e.source !== f.contentWindow || !e.data) return;
+    const m = e.data;
+    if (m.party === "size") { f.style.width = `min(${+m.w}px, 100vw)`; f.style.height = `${+m.h}px`; }
+    else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
+    else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
+  });
+}
 </script>
 </body>
 </html>

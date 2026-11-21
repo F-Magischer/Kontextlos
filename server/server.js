@@ -3,6 +3,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const QRCode = require("qrcode");
 const G = require("./game");
@@ -16,6 +17,23 @@ const MAX_MSG = 4096;
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf",
   ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
 
+// FURIDA party service (platform/): it asks us for a room, players arrive with a one-time code we redeem there
+const PARTY_API = (process.env.PARTY_API || "https://play.furida.workers.dev").replace(/\/$/, "");
+const PARTY_KEY = process.env.PARTY_KEY;
+const sha = (s) => crypto.createHash("sha256").update(String(s)).digest();
+const partyAuth = (h) => !!PARTY_KEY && crypto.timingSafeEqual(sha(h), sha("Bearer " + PARTY_KEY));
+
+async function redeem(code) {
+  if (!PARTY_KEY) return null;
+  try {
+    const r = await fetch(PARTY_API + "/api/redeem", {
+      method: "POST", headers: { authorization: "Bearer " + PARTY_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ code }), signal: AbortSignal.timeout(10000),
+    });
+    return r.ok ? await r.json() : null;
+  } catch (e) { console.error("party redeem:", e.message); return null; }
+}
+
 function lanUrl() {
   // PUBLIC_URL wins; Render sets RENDER_EXTERNAL_URL (https://<name>.onrender.com) on its own
   const pub = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
@@ -27,6 +45,12 @@ function lanUrl() {
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  if (p === "/party/prepare" && req.method === "POST") {
+    if (!partyAuth(req.headers.authorization || "")) return res.writeHead(403).end();
+    const r = newRoom();
+    maybeCleanup(r); // nobody may ever come
+    return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ room: r.code }));
+  }
   if (p === "/data") return S.page(req, res, live()).catch((e) => { console.error(e); res.writeHead(500).end("Fehler: " + e.message); });
   const qr = p.match(/^\/qr\/([A-Z]{4})\.png$/);
   if (qr) {
@@ -93,6 +117,33 @@ wss.on("connection", (ws) => {
     G.addPlayer(r, pid, name, ws, dev);
     S.log("join", r.code, dev, { name, phoneMode: r.phoneMode, phase: r.phase });
   };
+  const rejoinAs = (r, id, old) => {
+    if (old.ws && old.ws !== ws) old.ws.close();
+    pid = id; room = r; role = "player";
+    clearTimeout(r.cleanup);
+    send(ws, { t: "joined", build: BUILD, id: pid, code: r.code, name: old.name });
+    G.rejoin(r, pid, ws);
+  };
+
+  // a party member arrives with a hand-over code: the party service tells us who they are and which room
+  const partyJoin = async (code) => {
+    const p = await redeem(code);
+    if (role) return;
+    const r = p && rooms.get(p.room);
+    if (!r) return send(ws, { t: "error", msg: "Der Party-Raum ist nicht mehr da." });
+    const dev = "party:" + p.id;
+    const old = [...r.players].find(([, q]) => q.dev === dev);
+    if (old && old[1].kicked) return send(ws, { t: "error", msg: "Du wurdest aus dem Raum geworfen." });
+    if (old) return rejoinAs(r, old[0], old[1]);
+    if (G.isBanned(r, dev, p.name)) return send(ws, { t: "error", msg: "Du wurdest aus diesem Raum gebannt." });
+    if (r.players.size >= G.MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });
+    let name = String(p.name || "Gast").slice(0, 12);
+    const taken = (n) => [...r.players.values()].some((q) => q.name.toLowerCase() === n.toLowerCase());
+    for (let i = 2; taken(name); i++) name = String(p.name).slice(0, 11) + i;
+    clearTimeout(r.cleanup);
+    joinAs(r, name, dev);
+    if (p.leader && r.phase === "lobby") { r.order.splice(r.order.indexOf(pid), 1); r.order.unshift(pid); G.pushLobby(r); } // party leader becomes VIP
+  };
 
   ws.on("message", (raw) => {
     let m;
@@ -111,6 +162,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    if (!role && m.t === "join" && typeof m.party === "string") return void partyJoin(m.party.slice(0, 64)).catch(console.error);
     if (!role && (m.t === "join" || m.t === "create")) {
       const name = String(m.name || "").trim().slice(0, 12);
       const dev = String(m.dev || "").slice(0, 40); // per-device id, so a ban survives a name change
@@ -125,14 +177,7 @@ wss.on("connection", (ws) => {
       if (G.isBanned(r, dev, name)) return send(ws, { t: "error", msg: "Du wurdest aus diesem Raum gebannt." });
       const old = typeof m.pid === "string" && r.players.get(m.pid);
       if (old && old.kicked) return send(ws, { t: "error", msg: "Du wurdest aus dem Raum geworfen." });
-      if (old) {
-        if (old.ws && old.ws !== ws) old.ws.close();
-        pid = m.pid; room = r; role = "player";
-        clearTimeout(r.cleanup);
-        send(ws, { t: "joined", build: BUILD, id: pid, code: r.code, name: old.name });
-        G.rejoin(r, pid, ws);
-        return;
-      }
+      if (old) return rejoinAs(r, m.pid, old);
       for (const p of r.players.values())
         if (p.name.toLowerCase() === name.toLowerCase()) return send(ws, { t: "error", msg: "Name ist schon vergeben." });
       if (r.players.size >= G.MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });

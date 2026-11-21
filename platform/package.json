@@ -1,0 +1,17 @@
+{
+  "name": "furida-party",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FURIDA party service: guest identity, parties, game votes, hand-over to games. Serves the hub and the in-game overlay.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/flow.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

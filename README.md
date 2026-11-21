@@ -3,13 +3,19 @@
 Party-Spiel für 2–20 Leute im Browser. Sag was Harmloses — die anderen machen's schlimm.
 Design & Art Direction: siehe [DESIGN.md](DESIGN.md).
 
-**Live:** https://kontextlos.onrender.com — eine Startseite für alle: mitspielen, Raum erstellen oder das Gerät als großen Bildschirm (TV/Beamer) öffnen.
+**Live:** https://kontextlos.furida.workers.dev (Cloudflare Worker vor https://kontextlos.onrender.com) — eine Startseite für alle: mitspielen, Raum erstellen oder das Gerät als großen Bildschirm (TV/Beamer) öffnen.
 Gehostet auf Render (free, Frankfurt), deployt automatisch bei jedem Push auf `main`.
 
 ```
 game/     Godot 4.7 – der große Bildschirm (zeigt nur an, was der Server schickt)
 server/   Node – Spiellogik (game.js), Räume, Texte (content.js), Handy-Seite (public/index.html), QR-Codes
+platform/ Node – FURIDA-Party-Service + Hub (play.furida.workers.dev): Gast-Identität, Partys, Spielwahl, Übergabe an Spiele
+cloudflare/ Worker, der eine Render-App unter *.furida.workers.dev durchreicht
 ```
+
+**Party-System:** Konzept in [docs/party-system-konzept.md](docs/party-system-konzept.md). Test: `cd platform; npm test`.
+Lokal: `platform` mit `PLAY_URL=http://localhost:8090 KONTEXTLOS_URL=http://localhost:8080 KONTEXTLOS_KEY=dev` starten,
+`server` mit `PARTY_API=http://localhost:8090 PARTY_KEY=dev`, im Spiel-Tab einmal `localStorage.kl_party = "http://localhost:8090"`.
 
 ## Lokal spielen (alle im selben WLAN)
 

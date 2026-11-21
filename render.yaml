@@ -1,5 +1,5 @@
-# Render blueprint: one always-on Node web service (WebSockets + static files).
-# The public address comes from RENDER_EXTERNAL_URL; set PUBLIC_URL only for a custom domain.
+# Render blueprint: two always-on Node web services (WebSockets + static files).
+# Players reach both through Cloudflare Workers (cloudflare/proxy.js): kontextlos.furida.workers.dev and play.furida.workers.dev.
 services:
   - type: web
     name: kontextlos
@@ -9,6 +9,29 @@ services:
     buildCommand: cd server && npm ci
     startCommand: cd server && npm start
     healthCheckPath: /
+    buildFilter:
+      paths: ["server/**"]
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: PUBLIC_URL
+        value: https://kontextlos.furida.workers.dev
+      - key: PARTY_KEY # same value as KONTEXTLOS_KEY on furida-party
+        sync: false
+
+  # FURIDA party service + hub (platform/)
+  - type: web
+    name: furida-party
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd platform && npm ci
+    startCommand: cd platform && npm start
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["platform/**"]
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: KONTEXTLOS_KEY
+        sync: false
