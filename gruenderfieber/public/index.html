@@ -87,6 +87,9 @@ canvas { width: 100%; aspect-ratio: 4 / 3; background: #fff; border-radius: 16px
 .sz i { background: var(--text); border-radius: 50%; display: block; }
 .sz.on { border-color: var(--mint); }
 .tools .sp { flex: 1; }
+.mode { display: flex; background: var(--s2); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; }
+.mode button { width: auto; font-size: 15px; padding: 7px 12px; border-radius: 9px; background: transparent; color: var(--muted); box-shadow: none; }
+.mode button.on { background: var(--mint); color: var(--bg); }
 
 /* product card */
 .product { display: grid; gap: 14px; }
@@ -154,13 +157,17 @@ const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 const devId = () => { let d = store.get("gf_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("gf_dev", d); } return d; };
+const MODES = {
+  zufall: ["Zufall", "Das Spiel teilt die Karten aus: was, für wen, welches Problem. Einmal pro Runde darf man neu ziehen."],
+  auftrag: ["Auftrag", "Reihum ist jede Runde eine Person der Kunde: Sie schreibt die drei Karten, alle anderen erfinden dazu – und sie investiert."],
+  kette: ["Kettenbrief", "Jede:r schreibt einen Teil, die Karte wandert weiter: Was → Für wen → Problem. Erfinden muss die nächste Person."],
+};
 const eur = (k) => (k * 1000).toLocaleString("de-DE") + " €";
 // FURIDA party overlay: only on the platform domain (local tests: localStorage gf_party = "http://localhost:8090")
 const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("gf_party");
-const PHASE_SECS = { develop: 180, talk: 60, invest: 25, results: 25 };
 let ws, me = null, joining = false, st = null, shown = "", ends = 0, partyCode = null;
 // the drawing lives outside the DOM, so redraws of the screen never lose it
-let strokes = [], ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, invest = 0;
+let actions = [], tool = "pen", ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, invest = 0;
 
 function connect(code, name, create = false, party = null) {
   joining = true;
@@ -221,17 +228,18 @@ function show(d) {
   const you = player(d.you);
   if (you) { document.documentElement.style.setProperty("--me", you.color); $("#who").innerHTML = `<span class="code">${esc(d.party || d.code)}</span><b>${esc(you.name)}</b>`; }
   const p = d.pitch;
-  const key = d.phase === "develop" ? `dev:${d.round}:${d.submitted}:${d.playing}:${d.rerolled}`
+  const key = d.phase === "write" ? `write:${d.round}:${d.write.step}:${d.write.done}`
+    : d.phase === "develop" ? `dev:${d.round}:${d.submitted}:${d.playing}:${d.rerolled}`
     : d.phase === "pitch" ? `pitch:${d.round}:${p.index}:${d.stage}:${p.mine !== null}`
     : d.phase === "results" || d.phase === "end" ? `${d.phase}:${d.round}:${d.vip}`
-    : "lobby:" + JSON.stringify(d.players) + d.rounds + d.vip;
+    : "lobby:" + JSON.stringify(d.players) + [d.rounds, d.vip, d.mode, d.same, d.drawSecs];
   if (key === shown) return update();
   shown = key;
-  ({ lobby, develop, pitch, results: resultsScreen, end })[d.phase]();
+  ({ lobby, write, develop, pitch, results: resultsScreen, end })[d.phase]();
 }
 // small live bits that change without redrawing the screen
 function update() {
-  if (st.phase === "develop") { const el = $("#done"); if (el) el.innerHTML = doneList(new Set(st.players.filter((p) => p.done).map((p) => p.id))); }
+  if (st.phase === "develop" || st.phase === "write") { const el = $("#done"); if (el) el.innerHTML = doneList(new Set(st.players.filter((p) => p.done).map((p) => p.id))); }
   if (st.phase === "pitch") { const el = $("#progress"); if (el) el.textContent = `${st.pitch.decided} von ${st.pitch.needed} Investoren haben entschieden`; }
 }
 
@@ -240,13 +248,18 @@ function lobby() {
   app.innerHTML = `<div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
       <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
     <div class="stack"><span class="label">${on.length} / ${d.max} Gründer:innen</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
+    <div class="card stack"><span class="label">Spielmodus</span>
+      ${d.vip ? `<div class="seg">${Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" class="${k === d.mode ? "on" : ""}">${m[0]}</button>`).join("")}</div>` : `<h2>${MODES[d.mode][0]}</h2>`}
+      <p class="muted">${MODES[d.mode][1]}</p>
+      ${d.mode === "zufall" ? (d.vip ? `<div class="seg"><button data-same="0" class="${d.same ? "" : "on"}">Jede:r eigene Karten</button><button data-same="1" class="${d.same ? "on" : ""}">Gleiche Karten für alle</button></div>` : `<p class="muted">${d.same ? "Alle bekommen dieselben Karten." : "Jede:r bekommt eigene Karten."}</p>`) : ""}
+      <span class="label">Zeichenzeit</span>${d.vip ? `<div class="seg">${d.drawChoices.map((s) => `<button data-draw="${s}" class="${s === d.drawSecs ? "on" : ""}">${s / 60} Min.</button>`).join("")}</div>` : `<p class="muted">${d.drawSecs / 60} Minuten</p>`}</div>
     ${d.vip ? `<div class="stack"><span class="label">Runden (jede:r pitcht einmal pro Runde)</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
       <button id="start" ${on.length >= d.min ? "" : "disabled"}>${on.length >= d.min ? "Alle da – los geht's!" : `Noch ${d.min - on.length} fehlen`}</button></div>
       ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
       : `<div class="card"><p>${d.rounds} ${d.rounds === 1 ? "Runde" : "Runden"}. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
     <div class="card stack"><h2>So geht's</h2>
-      <p class="muted"><b>1.</b> Du ziehst drei Karten: was, für wen, welches Problem. Einmal pro Runde darfst du neu ziehen.</p>
-      <p class="muted"><b>2.</b> In 3 Minuten zeichnest du dein Produkt und gibst ihm Namen und Slogan.</p>
+      <p class="muted"><b>1.</b> Du bekommst drei Karten: was, für wen, welches Problem – je nach Modus vom Spiel oder von den anderen.</p>
+      <p class="muted"><b>2.</b> In ${d.drawSecs / 60} Minuten zeichnest du dein Produkt (Stift und Füllen) und gibst ihm Namen und Slogan.</p>
       <p class="muted"><b>3.</b> Reihum pitcht jede:r eine Minute lang – laut, vor allen.</p>
       <p class="muted"><b>4.</b> Nach jedem Pitch investieren die anderen aus ihrem Rundenbudget von ${eur(d.budgetMax)}. Wer am Ende das meiste Kapital eingesammelt hat, gewinnt.</p></div>
     ${PARTY ? furidaAd() : ""}`;
@@ -258,66 +271,132 @@ function lobby() {
   if (d.vip) {
     $("#start").onclick = () => out({ a: "start" });
     app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "rounds", value: +b.dataset.rounds }));
+    app.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => out({ a: "settings", mode: b.dataset.mode }));
+    app.querySelectorAll("[data-same]").forEach((b) => b.onclick = () => out({ a: "settings", same: b.dataset.same === "1" }));
+    app.querySelectorAll("[data-draw]").forEach((b) => b.onclick = () => out({ a: "settings", draw: +b.dataset.draw }));
     app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
   }
   if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
 }
 
+// ---------------------------------------------------------------- write: the client's brief, or one part of a chain card
+const FIELD = { what: ["Was soll erfunden werden?", "z. B. Ein Wecker"], who: ["Für wen?", "z. B. für Vampire"], problem: ["Welches Problem löst es?", "z. B. Die Nacht ist zu kurz."] };
+function write() {
+  const d = st, w = d.write, done = new Set(d.players.filter((p) => p.done).map((p) => p.id));
+  const what = w.kind === "auftrag" ? "Auftrag" : `Kettenbrief ${w.step + 1} / 3`;
+  if (!w.task || w.done) {
+    app.innerHTML = head(what) + `<div class="card spot stack"><h2>${w.task ? "Weitergegeben!" : w.kind === "auftrag" ? `${esc(w.setter)} schreibt gerade euren Auftrag …` : "Die anderen schreiben …"}</h2>
+      <p class="muted">${w.kind === "auftrag" ? "Gleich bekommen alle dieselbe Aufgabe – und erfinden etwas völlig anderes." : "Jede Karte wandert weiter, bis sie Was, Für wen und Problem hat."}</p></div><div id="done">${doneList(done)}</div>`;
+    return;
+  }
+  const t = w.task, prev = [["what", "Was"], ["who", "Für wen"]].filter(([k]) => t.prev[k]);
+  app.innerHTML = head(what) + `<div class="card stack"><h2>${w.kind === "auftrag" ? "Du bist diese Runde der Kunde!" : "Dein Teil der Karte"}</h2>
+      <p class="muted">${w.kind === "auftrag" ? "Gib allen anderen vor, was sie erfinden sollen. Du pitchst diese Runde nicht, sondern investierst nur." : w.step === 0 ? "Schreib, was erfunden werden soll. Danach wandert die Karte weiter und die nächsten ergänzen sie. Leer lassen = Zufallskarte."
+        : "Lies, was dein Vordermann geschrieben hat, und schreib deinen Teil dazu. Leer lassen = Zufallskarte."}</p>
+      ${prev.length ? `<div class="brief">${prev.map(([k, l], i) => `<div class="bc ${"ab"[i]}"><small>${l}</small>${esc(t.prev[k])}</div>`).join("")}</div>` : ""}
+      ${t.fields.map((f) => `<div><label class="label" for="w_${f}">${FIELD[f][0]}</label><input id="w_${f}" maxlength="60" placeholder="${FIELD[f][1]}"></div>`).join("")}
+      <button id="send" class="gold">${w.kind === "auftrag" ? "Auftrag vergeben" : "Weitergeben"}</button></div><div id="done">${doneList(done)}</div>`;
+  $("#send").onclick = () => { const o = { a: "write" }; t.fields.forEach((f) => { o[f] = $("#w_" + f).value; }); $("#send").disabled = true; out(o); };
+}
+
 // ---------------------------------------------------------------- develop: brief, drawing, name, slogan
 function develop() {
   const d = st;
-  if (sentRound !== d.round && !d.submitted && d.round !== develop.round) { strokes = []; pname = ""; pslogan = ""; develop.round = d.round; }
+  if (sentRound !== d.round && !d.submitted && d.round !== develop.round) { actions = []; pname = ""; pslogan = ""; develop.round = d.round; }
   const done = new Set(d.players.filter((p) => p.done).map((p) => p.id));
-  if (!d.playing) { app.innerHTML = head("Entwickeln") + `<div class="card stack"><h2>Gleich bist du dabei.</h2><p class="muted">Ab der nächsten Runde gründest du mit.</p><div id="done">${doneList(done)}</div></div>`; return; }
+  if (!d.playing) {
+    app.innerHTML = head("Entwickeln") + `<div class="card stack">${d.setter ? `<h2>Dein Auftrag ist raus.</h2><p class="muted">Die anderen erfinden jetzt etwas dazu. Danach entscheidest du, wo du investierst.</p>`
+      : `<h2>Gleich bist du dabei.</h2><p class="muted">Ab der nächsten Runde gründest du mit.</p>`}<div id="done">${doneList(done)}</div></div>`;
+    return;
+  }
   if (d.submitted) {
     app.innerHTML = head("Entwickeln") + `<div class="card stack" style="text-align:center"><span class="label">Eingereicht</span><h2>${esc(pname || "Deine Idee")}</h2>
       <p class="muted">Bereite deinen Pitch vor: Was ist es? Welches Problem löst es? Warum muss man es haben?</p><div id="done">${doneList(done)}</div></div>`;
     return;
   }
   const COLS = ["#101418", "#FF6B6B", "#3DDC97", "#5B8CFF", "#FFC857", "#C77DFF", "#8B5A2B", "#FFFFFF"];
-  app.innerHTML = head("Entwickeln") + briefCards(d.brief)
-    + (d.rerolled ? "" : `<button class="ghost small" id="reroll">Neue Karten ziehen (1× pro Runde)</button>`)
+  const by = d.brief.by && d.brief.by.length ? `<span class="label">Karte von ${d.brief.by.map(esc).join(" → ")}</span>` : "";
+  app.innerHTML = head("Entwickeln") + by + briefCards(d.brief)
+    + (d.rerollable && !d.rerolled ? `<button class="ghost small" id="reroll">Neue Karten ziehen (1× pro Runde)</button>` : "")
     + `<div class="card pad"><canvas id="pad" width="800" height="600"></canvas>
-      <div class="tools">${COLS.map((c) => `<button class="sw ${c === ink ? "on" : ""}" data-c="${c}" style="background:${c}" title="${c === "#FFFFFF" ? "Radierer" : "Farbe"}"></button>`).join("")}
-        <span class="sp"></span>${[4, 8, 18].map((s) => `<button class="sz ${s === size ? "on" : ""}" data-s="${s}" aria-label="Pinsel ${s}"><i style="width:${s + 2}px;height:${s + 2}px"></i></button>`).join("")}
-        <button class="small ghost" id="undo">Zurück</button><button class="small ghost" id="clear">Leeren</button></div></div>
+      <div class="tools"><div class="mode"><button class="${tool === "pen" ? "on" : ""}" data-t="pen">✏️ Stift</button><button class="${tool === "fill" ? "on" : ""}" data-t="fill">🪣 Füllen</button></div>
+        <span class="sp"></span><button class="small ghost" id="undo">Zurück</button><button class="small ghost" id="clear">Leeren</button></div>
+      <div class="tools">${COLS.map((c) => `<button class="sw ${c === ink ? "on" : ""}" data-c="${c}" style="background:${c}" title="${c === "#FFFFFF" ? "Weiß / Radierer" : "Farbe"}"></button>`).join("")}
+        <span class="sp"></span>${[4, 8, 18].map((s) => `<button class="sz ${s === size ? "on" : ""}" data-s="${s}" aria-label="Pinsel ${s}"><i style="width:${s + 2}px;height:${s + 2}px"></i></button>`).join("")}</div></div>
     <div class="row2"><div><label class="label" for="pname">Produktname</label><input id="pname" maxlength="30" placeholder="z. B. Sockenradar 3000" value="${esc(pname)}"></div>
       <div><label class="label" for="pslogan">Slogan</label><input id="pslogan" maxlength="90" placeholder="z. B. Nie wieder einsam im Trockner." value="${esc(pslogan)}"></div></div>
     <button id="submit" class="gold">Idee einreichen</button><div id="done">${doneList(done)}</div>`;
-  if (!d.rerolled) $("#reroll").onclick = () => out({ a: "reroll" });
+  if (d.rerollable && !d.rerolled) $("#reroll").onclick = () => out({ a: "reroll" });
   $("#pname").oninput = (e) => { pname = e.target.value; };
   $("#pslogan").oninput = (e) => { pslogan = e.target.value; };
-  app.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => { ink = b.dataset.c; app.querySelectorAll("[data-c]").forEach((x) => x.classList.toggle("on", x === b)); });
-  app.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { size = +b.dataset.s; app.querySelectorAll("[data-s]").forEach((x) => x.classList.toggle("on", x === b)); });
-  $("#undo").onclick = () => { strokes.pop(); paint(); };
-  $("#clear").onclick = () => { strokes = []; paint(); };
+  const pickOne = (sel, el) => app.querySelectorAll(sel).forEach((x) => x.classList.toggle("on", x === el));
+  app.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { tool = b.dataset.t; pickOne("[data-t]", b); });
+  app.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => { ink = b.dataset.c; pickOne("[data-c]", b); });
+  app.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { size = +b.dataset.s; tool = "pen"; pickOne("[data-s]", b); pickOne("[data-t]", app.querySelector('[data-t="pen"]')); });
+  $("#undo").onclick = () => { actions.pop(); paint(); };
+  $("#clear").onclick = () => { actions = []; paint(); };
   $("#submit").onclick = submit;
   drawing($("#pad"));
 }
+
+// the picture is a list of actions (strokes and fills), replayed on undo; new strokes are drawn incrementally
+const line = (g, s, from) => {
+  g.strokeStyle = s.c; g.lineWidth = s.w; g.lineCap = g.lineJoin = "round"; g.beginPath();
+  const p = s.p.slice(Math.max(0, from - 1));
+  p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+  if (p.length === 1) g.lineTo(p[0][0] + .1, p[0][1]);
+  g.stroke();
+};
 function paint() {
   const cv = $("#pad"); if (!cv) return;
-  const g = cv.getContext("2d");
+  const g = cv.getContext("2d", { willReadFrequently: true });
   g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height);
-  g.lineCap = g.lineJoin = "round";
-  for (const s of strokes) {
-    g.strokeStyle = s.c; g.lineWidth = s.w; g.beginPath();
-    s.p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-    if (s.p.length === 1) g.lineTo(s.p[0][0] + .1, s.p[0][1]);
-    g.stroke();
+  for (const a of actions) a.f ? flood(g, a.x, a.y, a.c) : line(g, a, 0);
+}
+// bucket fill: every pixel connected to (x, y) and close to its colour takes the new colour
+function flood(g, x, y, hex) {
+  const W = g.canvas.width, H = g.canvas.height, img = g.getImageData(0, 0, W, H), px = img.data;
+  x = Math.floor(x); y = Math.floor(y);
+  if (x < 0 || y < 0 || x >= W || y >= H) return;
+  const at = (y * W + x) * 4, t = [px[at], px[at + 1], px[at + 2]];
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255];
+  if (Math.abs(t[0] - c[0]) + Math.abs(t[1] - c[1]) + Math.abs(t[2] - c[2]) < 10) return;
+  const TOL = 110; // also swallows the soft anti-aliased edge pixels of strokes
+  const near = (i) => Math.abs(px[i] - t[0]) + Math.abs(px[i + 1] - t[1]) + Math.abs(px[i + 2] - t[2]) <= TOL;
+  const seen = new Uint8Array(W * H), stack = [y * W + x];
+  while (stack.length) {
+    const p = stack.pop();
+    if (seen[p]) continue;
+    seen[p] = 1;
+    const i = p * 4;
+    if (!near(i)) continue;
+    px[i] = c[0]; px[i + 1] = c[1]; px[i + 2] = c[2]; px[i + 3] = 255;
+    const px0 = p % W;
+    if (px0 > 0) stack.push(p - 1);
+    if (px0 < W - 1) stack.push(p + 1);
+    if (p >= W) stack.push(p - W);
+    if (p < W * (H - 1)) stack.push(p + W);
   }
+  g.putImageData(img, 0, 0);
 }
 function drawing(cv) {
   paint();
+  const g = cv.getContext("2d", { willReadFrequently: true });
   let cur = null;
   const at = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
-  cv.onpointerdown = (e) => { cv.setPointerCapture(e.pointerId); cur = { c: ink, w: ink === "#FFFFFF" ? size * 3 : size, p: [at(e)] }; strokes.push(cur); paint(); };
-  cv.onpointermove = (e) => { if (!cur) return; cur.p.push(at(e)); paint(); };
+  cv.onpointerdown = (e) => {
+    const [x, y] = at(e);
+    if (tool === "fill") { actions.push({ f: true, x, y, c: ink }); flood(g, x, y, ink); return; }
+    cv.setPointerCapture(e.pointerId);
+    cur = { c: ink, w: ink === "#FFFFFF" ? size * 3 : size, p: [[x, y]] };
+    actions.push(cur); line(g, cur, 0);
+  };
+  cv.onpointermove = (e) => { if (!cur) return; cur.p.push(at(e)); line(g, cur, cur.p.length - 1); };
   cv.onpointerup = cv.onpointercancel = () => { cur = null; };
 }
 function submit() {
   if (!st || st.phase !== "develop" || st.submitted || sentRound === st.round) return;
   sentRound = st.round;
-  paint();
   out({ a: "submit", name: pname, slogan: pslogan, img: $("#pad") ? $("#pad").toDataURL("image/png") : blank() });
 }
 const blank = () => { const c = document.createElement("canvas"); c.width = 800; c.height = 600; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 800, 600); return c.toDataURL("image/png"); };
@@ -389,7 +468,7 @@ function end() {
 setInterval(() => {
   if (!st) return;
   const left = Math.max(0, ends - Date.now()), s = $("#secs"), bar = $("#tbar");
-  const total = (PHASE_SECS[st.phase === "pitch" ? st.stage : st.phase] || 60) * 1000;
+  const total = (st.total || 60) * 1000;
   if (s) s.textContent = Math.ceil(left / 1000) + " s";
   if (bar) { bar.firstChild.style.transform = `scaleX(${Math.min(1, left / total)})`; bar.classList.toggle("low", left < 10000); }
   if (st.phase === "develop" && st.playing && !st.submitted && left < 1500) submit();

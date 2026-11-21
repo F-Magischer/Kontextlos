@@ -77,6 +77,39 @@ function bot() {
   a.act({ a: "restart" });
   await a.next((m) => m.t === "state" && m.d.phase === "lobby");
 
-  console.log("PASS gruenderfieber: briefs, drawings, pitches, investments, results");
+  // ---- Kettenbrief: every card passes three players (each sees the parts before), then someone else invents
+  a.act({ a: "settings", mode: "kette" });
+  a.act({ a: "start" });
+  for (let step = 0; step < 3; step++) {
+    for (const [w, x] of [[a, "A"], [b, "B"], [c, "C"]]) {
+      const s = (await w.next((m) => m.t === "state" && m.d.phase === "write" && m.d.write.step === step && m.d.write.task && !m.d.write.done)).d;
+      if (step) assert.ok(s.write.task.prev.what, "sees the part before");
+      w.act({ a: "write", [s.write.task.fields[0]]: `${x}${step}` });
+    }
+  }
+  const chain = (await a.next((m) => m.t === "state" && m.d.phase === "develop" && m.d.brief?.by)).d.brief;
+  assert.strictEqual(new Set([chain.what[0], chain.who[0], chain.problem[0]]).size, 3, "three different authors");
+  assert.strictEqual(chain.by.length, 3);
+
+  // ---- Auftrag: one client writes the brief for everyone else, then only invests
+  const k = await bot(), l = await bot(), m2 = await bot();
+  k.say({ t: "create", name: "Kim", dev: "k" });
+  const code2 = (await k.next((m) => m.t === "joined")).code;
+  l.say({ t: "join", code: code2, name: "Lea", dev: "l" });
+  m2.say({ t: "join", code: code2, name: "Max", dev: "m" });
+  await k.next((m) => m.t === "state" && m.d.players.length === 3);
+  k.act({ a: "settings", mode: "auftrag" });
+  k.act({ a: "start" });
+  const kw = (await k.next((m) => m.t === "state" && m.d.phase === "write")).d;
+  assert.deepStrictEqual(kw.write.task.fields, ["what", "who", "problem"]);
+  k.act({ a: "write", what: "Ein Hut", who: "für Geister", problem: "" }); // empty: a random card fills it
+  const lb = (await l.next((m) => m.t === "state" && m.d.phase === "develop")).d;
+  assert.strictEqual(lb.brief.what, "Ein Hut");
+  assert.ok(lb.brief.problem);
+  assert.deepStrictEqual(lb.brief.by, ["Kim"]);
+  const kd = (await k.next((m) => m.t === "state" && m.d.phase === "develop")).d;
+  assert.ok(kd.setter && !kd.playing && kd.budget === 100, "the client only invests");
+
+  console.log("PASS gruenderfieber: briefs, drawings, pitches, investments, results, chain and client modes");
   done(0);
 })().catch((e) => { console.error("FAIL:", e); done(1); });
