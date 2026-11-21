@@ -278,10 +278,11 @@ function readJson(req) {
 // a game backend exchanges a one-time code for who the player is and which room to put them in
 async function redeem(req, res) {
   const auth = req.headers.authorization || "";
-  const g = GAMES.find((x) => x.key && safeEq(auth, "Bearer " + x.key));
   const body = await readJson(req);
-  const c = g && codes.get(String(body.code));
-  if (!c || c.game !== g.id || c.exp < Date.now()) return json(res, 403, { error: "invalid" });
+  const c = codes.get(String(body.code));
+  // the code names its game; only that game's key may redeem it (works even if two games share a key)
+  const g = c && game(c.game);
+  if (!c || !g || !g.key || !safeEq(auth, "Bearer " + g.key) || c.exp < Date.now()) return json(res, 403, { error: "invalid" });
   codes.delete(String(body.code));
   const pl = players.get(c.player);
   if (!pl) return json(res, 403, { error: "invalid" });

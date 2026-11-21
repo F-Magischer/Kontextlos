@@ -35,3 +35,24 @@ services:
         value: "22"
       - key: KONTEXTLOS_KEY
         sync: false
+      - key: JASAGER_KEY
+        sync: false
+
+  # JA-SAGER (jasager/), a second FURIDA game
+  - type: web
+    name: jasager
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd jasager && npm ci
+    startCommand: cd jasager && npm start
+    healthCheckPath: /
+    buildFilter:
+      paths: ["jasager/**"]
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PUBLIC_URL
+        value: https://jasager.furida.workers.dev
+      - key: PARTY_KEY # same value as JASAGER_KEY on furida-party
+        sync: false

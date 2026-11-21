@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF6E5">
+<title>JA-SAGER</title>
+<link rel="preload" href="fonts/BricolageGrotesque.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; font-display: swap; }
+/* game-show look: warm cream, navy ink, big green "Ja" and red "Nein", chunky buttons */
+:root { --bg: #FFF6E5; --ink: #14213D; --soft: #5B6478; --card: #FFFFFF; --yes: #18B26B; --yes2: #DDF6E9; --no: #F2545B; --no2: #FDE3E4; --sun: #FFC93C; --line: rgba(20,33,61,.12); }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--ink); }
+body { min-height: 100dvh; font: 17px/1.4 "Brico", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
+  background-image: radial-gradient(circle at 15% -10%, rgba(255,201,60,.45), transparent 40%), radial-gradient(circle at 110% 20%, rgba(24,178,107,.18), transparent 35%), radial-gradient(circle at -10% 90%, rgba(242,84,91,.16), transparent 35%); background-attachment: fixed; }
+.wrap { max-width: 980px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 16px 40px; min-height: 100dvh; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 14px; }
+.logo { font-weight: 800; font-size: 25px; letter-spacing: -.02em; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 2px; transition: transform .15s; }
+.logo b { background: var(--yes); color: #fff; padding: 1px 9px; border-radius: 10px; box-shadow: 0 4px 0 var(--ink); margin-right: 3px; transform: rotate(-4deg); display: inline-block; }
+.logo:active { transform: scale(.95); }
+.hr { display: flex; gap: 8px; align-items: center; }
+.who { display: flex; gap: 6px; align-items: center; font-weight: 800; font-size: 13px; }
+.who .code { background: var(--card); border: 2px solid var(--ink); padding: 2px 8px; border-radius: 8px; letter-spacing: .12em; }
+.who b { background: var(--me, var(--ink)); color: #fff; padding: 3px 9px; border-radius: 8px; }
+main { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+h1 { font-size: clamp(30px, 7vw, 52px); line-height: 1.02; letter-spacing: -.03em; font-weight: 800; }
+h2 { font-size: 24px; letter-spacing: -.02em; font-weight: 800; }
+.label { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+.card { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); padding: 18px; }
+button, .btn { font: 800 20px "Brico", system-ui, sans-serif; color: #fff; background: var(--ink); border: 3px solid var(--ink); border-radius: 16px; padding: 14px 18px;
+  box-shadow: 0 5px 0 rgba(20,33,61,.35); cursor: pointer; transition: transform .08s, box-shadow .08s; text-align: center; text-decoration: none; display: block; width: 100%; }
+button:active, .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(20,33,61,.35); }
+button:disabled { opacity: .35; cursor: default; transform: none; }
+button.ghost { background: var(--card); color: var(--ink); }
+button.small { font-size: 16px; padding: 9px 12px; width: auto; }
+input { width: 100%; font: 700 20px "Brico", sans-serif; color: var(--ink); background: var(--card); border: 3px solid var(--ink); border-radius: 14px; padding: 12px 14px; outline: none; }
+input:focus { box-shadow: 0 0 0 4px var(--sun); }
+input#code { letter-spacing: .3em; text-transform: uppercase; }
+.err { background: var(--no); color: #fff; border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--soft); font-weight: 800; font-size: 13px; } .or::before, .or::after { content: ""; flex: 1; height: 2px; background: var(--line); }
+.stack { display: grid; gap: 12px; }
+
+/* start */
+.start { display: grid; gap: 22px; align-content: center; flex: 1; }
+.badge { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.badge span { font-weight: 800; padding: 6px 12px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); }
+.badge .y { background: var(--yes); color: #fff; } .badge .n { background: var(--no); color: #fff; }
+@media (min-width: 820px) { .start { grid-template-columns: 1.1fr 1fr; column-gap: 60px; } .start h1 { font-size: 72px; } }
+
+/* lobby */
+.joinbox { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: var(--sun); }
+.bigcode { font-size: 42px; letter-spacing: .14em; background: var(--card); color: var(--ink); width: auto; display: inline-block; padding: 6px 14px; margin: 6px 0; box-shadow: 0 4px 0 var(--ink); }
+.qr { width: 140px; height: 140px; border: 3px solid var(--ink); border-radius: 14px; background: #fff; display: block; image-rendering: pixelated; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { color: #fff; font-weight: 800; padding: 6px 12px; border-radius: 12px; border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.chip small { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+.chip.off { opacity: .4; }
+.seg { display: flex; gap: 8px; } .seg button { flex: 1; font-size: 18px; padding: 10px; background: var(--card); color: var(--ink); } .seg button.on { background: var(--ink); color: #fff; }
+.mrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 2px dashed var(--line); } .mrow b { flex: 1; }
+.rules p { color: var(--soft); font-size: 15px; }
+
+/* question */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 800; }
+.tbar { height: 12px; border-radius: 99px; background: var(--card); border: 2px solid var(--ink); overflow: hidden; }
+.tbar i { display: block; height: 100%; background: var(--ink); transform-origin: left; }
+.tbar.low i { background: var(--no); }
+.qcard { text-align: center; padding: 26px 18px; background: var(--card); transform: rotate(-.6deg); }
+.qcard h1 { font-size: clamp(28px, 6.5vw, 48px); }
+.yn { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.yn button { font-size: 30px; padding: 18px; color: var(--ink); background: var(--card); }
+.yn .yes.on { background: var(--yes); color: #fff; } .yn .no.on { background: var(--no); color: #fff; }
+.guess { display: grid; gap: 12px; }
+@media (min-width: 760px) { .guess { grid-template-columns: 1fr 260px; align-items: end; } }
+/* number wheel: swipe sideways, the middle number counts */
+.wheel { position: relative; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 6px; background: var(--card); border: 3px solid var(--ink); border-radius: 20px; box-shadow: 0 6px 0 var(--ink); padding: 6px; }
+.wheel .arr { width: 44px; height: 44px; padding: 0; font-size: 24px; border-radius: 12px; box-shadow: none; }
+.track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 calc(50% - 32px); height: 86px; align-items: center; cursor: grab; position: relative;
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); }
+.track::-webkit-scrollbar { display: none; }
+.track span { flex: 0 0 64px; text-align: center; scroll-snap-align: center; font-size: 46px; font-weight: 800; color: var(--soft); user-select: none; }
+.track span.on { color: var(--ink); }
+.lens { position: absolute; left: 50%; top: 8px; bottom: 8px; width: 66px; transform: translateX(-50%); border-radius: 14px; background: var(--sun); z-index: 0; pointer-events: none; }
+.track { z-index: 1; }
+.of { text-align: center; color: var(--soft); font-weight: 700; font-size: 14px; margin-top: 4px; }
+#lock { font-size: 22px; background: var(--yes); border-color: var(--ink); }
+.waitbox { text-align: center; display: grid; gap: 10px; }
+.mine { display: inline-flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.mine span { font-weight: 800; padding: 6px 14px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); }
+.mine .y { background: var(--yes); color: #fff; } .mine .n { background: var(--no); color: #fff; }
+.done span { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 14px; background: var(--card); border: 2px solid var(--line); color: var(--soft); }
+.done span.ok { border-color: var(--yes); color: var(--ink); } .done span.ok::before { content: "✓ "; color: var(--yes); }
+
+/* reveal: yes players | counts | no players */
+.reveal { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-template-areas: "mid mid" "yes no"; align-items: start; }
+@media (min-width: 760px) { .reveal { grid-template-columns: 1fr 180px 1fr; grid-template-areas: "yes mid no"; } }
+.col { display: grid; gap: 8px; } .col.yes { grid-area: yes; } .col.no { grid-area: no; }
+.mid { grid-area: mid; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (min-width: 760px) { .mid { grid-template-columns: 1fr; } }
+.cnt { border: 3px solid var(--ink); border-radius: 20px; box-shadow: 0 6px 0 var(--ink); padding: 12px; text-align: center; color: #fff; animation: pop .5s cubic-bezier(.2,1.5,.4,1) both; }
+.cnt b { display: block; font-size: 54px; line-height: 1; } .cnt span { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: 14px; }
+.cnt.y { background: var(--yes); } .cnt.n { background: var(--no); animation-delay: .12s; }
+.pc { border-radius: 16px; padding: 10px 12px; border: 2px solid var(--ink); display: grid; gap: 2px; animation: rise .4s cubic-bezier(.16,1,.3,1) both; }
+.col.yes .pc { background: var(--yes2); } .col.no .pc { background: var(--no2); }
+.pc.me { box-shadow: 0 0 0 3px var(--sun); }
+.pc b { font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc .tot { font-weight: 800; font-size: 15px; }
+.pc .gain { font-weight: 800; font-size: 14px; color: var(--soft); }
+.pc .gain.g3 { color: var(--yes); } .pc .gain.g1 { color: #C98A00; }
+.nobody { text-align: center; color: var(--soft); font-weight: 700; font-size: 14px; padding: 8px; }
+.real { text-align: center; font-weight: 800; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+@keyframes rise { from { transform: translateY(14px); opacity: 0; } }
+
+/* end */
+.rank { display: grid; gap: 8px; }
+.rank div { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.rank div:first-child { background: var(--sun); box-shadow: 0 5px 0 var(--ink); font-size: 20px; }
+.rank i { font-style: normal; font-size: 22px; }
+
+/* party: FURIDA button only in the lobby, quit dialog, party page iframe */
+.modal { position: fixed; inset: 0; z-index: 60; background: rgba(20,33,61,.55); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.modal[hidden], .quit[hidden], .pbtn[hidden] { display: none; }
+.modal .card { max-width: 420px; width: 100%; display: grid; gap: 10px; animation: pop .3s cubic-bezier(.2,1.4,.4,1) both; }
+.quit { width: auto; padding: 5px 7px; line-height: 0; background: var(--card); color: var(--ink); border-width: 2px; border-radius: 10px; box-shadow: 0 3px 0 var(--ink); }
+.pbtn { width: auto; padding: 4px 10px; font-size: 14px; letter-spacing: .08em; border-radius: 10px; background: linear-gradient(100deg, #7C5CFF, #22D3EE); border: 0; box-shadow: 0 3px 0 rgba(20,33,61,.4); position: relative; }
+.pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--sun); color: var(--ink); border: 2px solid var(--ink); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
+body:not(.lobby) .pbtn { display: none; }
+@media (max-width: 460px) { body.inparty .who { display: none; } }
+iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
+iframe.party.open { width: 100%; height: 100%; visibility: visible; }
+.furida-ad { display: grid; gap: 4px; padding: 18px 20px; border-radius: 20px; color: #EEF0FF; text-decoration: none;
+  background: radial-gradient(120% 140% at 0% 0%, #7C5CFF 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, #22D3EE 0%, transparent 50%), #0E0F1A; box-shadow: 0 14px 40px -16px rgba(124,92,255,.8); }
+.furida-ad .fa-brand { font-weight: 800; font-size: 13px; letter-spacing: .22em; opacity: .85; }
+.furida-ad b { font-size: 22px; line-height: 1.1; } .furida-ad small { font-size: 15px; opacity: .8; }
+.furida-ad .fa-go { margin-top: 8px; font-weight: 800; font-size: 15px; justify-self: start; background: #fff; color: #0E0F1A; padding: 7px 14px; border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="logo" href="/" title="Zur Startseite"><b>JA</b>-SAGER</a><div class="hr">
+<button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><div class="who" id="who"></div>
+<button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
+<main id="app"></main>
+</div>
+<div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p>Du verlässt die Party und gehst zurück zur Lobby.</p>
+<button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+const devId = () => { let d = store.get("js_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("js_dev", d); } return d; };
+// FURIDA party overlay: only on the platform domain (local tests: localStorage js_party = "http://localhost:8090")
+const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("js_party");
+let ws, me = null, joining = false, st = null, shown = "", ends = 0, myAns = null, myGuess = 0, partyCode = null;
+
+function connect(code, name, create = false, party = null) {
+  joining = true;
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+  ws.onopen = () => ws.send(JSON.stringify(party ? { t: "join", party } : create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("js_pid_" + code) }));
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === "joined" || m.t === "error") joining = false;
+    if (m.t === "joined") {
+      if (window.JS_BUILD && m.build !== window.JS_BUILD) return location.reload(); // new version deployed: load it
+      window.JS_BUILD = m.build;
+      me = m; store.set("js_pid_" + m.code, m.id); store.set("js_name", m.name);
+      history.replaceState(null, "", "?code=" + m.code);
+    }
+    else if (m.t === "error") { me = null; startScreen(m.msg); usePartyCode(); }
+    else if (m.t === "party" && /^https?:\/\//.test(m.url)) location.href = m.url; // a party plays here: join it first
+    else if (m.t === "state") show(m.d);
+  };
+  ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
+}
+const out = (d) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
+
+function startScreen(err) {
+  shown = ""; st = null; document.body.classList.remove("lobby");
+  $("#who").innerHTML = "";
+  const code0 = new URLSearchParams(location.search).get("code") || "";
+  app.innerHTML = `<div class="start">
+    <div class="stack"><span class="label">Partyspiel · 2–20 Leute</span><h1>Wie viele von euch sagen Ja?</h1>
+      <p>Alle beantworten dieselbe persönliche Frage mit Ja oder Nein – und schätzen, wie viele aus der Runde Ja sagen. Richtig geschätzt gibt 3 Punkte, knapp daneben 1.</p>
+      <div class="badge"><span class="y">Ja</span><span class="n">Nein</span><span>Wie viele?</span></div></div>
+    <div class="card stack">${err ? `<div class="err">${esc(err)}</div>` : ""}
+      <div><label class="label" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("js_name") || "")}"></div>
+      <div><label class="label" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
+      <button id="go">Mitspielen</button><div class="or">oder</div><button id="new" class="ghost">Neuen Raum erstellen</button></div></div>`;
+  $("#go").onclick = () => {
+    const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
+    if (!name) return startScreen("Erst deinen Namen eingeben.");
+    if (code.length !== 4) return startScreen("Der Raumcode hat 4 Buchstaben. Neuer Raum? Dann unten erstellen.");
+    $("#go").disabled = true; connect(code, name);
+  };
+  $("#new").onclick = () => { const name = $("#name").value.trim(); if (!name) return startScreen("Erst deinen Namen eingeben."); $("#new").disabled = true; connect("", name, true); };
+  for (const id of ["name", "code"]) $("#" + id).onkeydown = (e) => { if (e.key === "Enter") $("#go").click(); };
+}
+
+// ---------------------------------------------------------------- screens
+const nameOf = (id) => st.players.find((p) => p.id === id)?.name || "?";
+const player = (id) => st.players.find((p) => p.id === id);
+
+function show(d) {
+  st = d;
+  ends = Date.now() + d.left;
+  document.body.classList.toggle("lobby", d.phase === "lobby");
+  const you = player(d.you);
+  if (you) { document.documentElement.style.setProperty("--me", you.color); $("#who").innerHTML = `<span class="code">${esc(d.party || d.code)}</span><b>${esc(you.name)}</b>`; }
+  // the question screen is drawn once per round (and again after locking in), so the wheel keeps its spot
+  const key = d.phase === "ask" ? `ask:${d.round}:${!!d.mine}:${d.playing}` : d.phase === "reveal" ? `reveal:${d.round}` : d.phase + ":" + JSON.stringify(d.players) + d.rounds + d.vip;
+  if (key === shown) return updateAsk();
+  shown = key;
+  ({ lobby, ask, reveal, end })[d.phase]();
+}
+
+function lobby() {
+  const d = st, on = d.players.filter((p) => p.online);
+  app.innerHTML = `<div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
+      <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
+    <div class="stack"><span class="label">${on.length} / ${d.max} dabei</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
+    ${d.vip ? `<div class="stack"><span class="label">Fragen</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
+      <button id="start" ${on.length >= d.min ? "" : "disabled"}>${on.length >= d.min ? "Alle da – los!" : `Noch ${d.min - on.length} fehlt`}</button></div>
+      ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
+      : `<div class="card"><p>${d.rounds} Fragen. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
+    <div class="card rules stack"><h2>So geht's</h2><p>Jede Runde eine Frage für alle. Du antwortest ehrlich mit Ja oder Nein und drehst am Rad, wie viele aus der Runde Ja sagen.</p>
+      <p><b>Genau richtig: 3 Punkte.</b> Um 1 daneben: 1 Punkt. Ab 10 Spielern zählt auch 2 daneben noch als knapp.</p></div>
+    ${PARTY ? furidaAd() : ""}`;
+  $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Kopiert!"; } catch { $("#copied").textContent = d.party || d.code; } };
+  $("#share").onclick = async () => {
+    try { if (navigator.share) await navigator.share({ title: "JA-SAGER", text: "Spiel mit! Code " + (d.party || d.code), url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
+    catch (e) { if (e.name !== "AbortError") $("#share").textContent = d.link; }
+  };
+  if (d.vip) {
+    $("#start").onclick = () => out({ a: "start" });
+    app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "rounds", value: +b.dataset.rounds }));
+    app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
+  }
+  if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
+}
+
+const head = () => `<div class="top"><span>Frage ${st.round} / ${st.rounds}</span><span id="secs"></span></div><div class="tbar" id="tbar"><i></i></div>`;
+const doneList = () => `<div class="done">${st.players.filter((p) => p.online || p.done).map((p) => `<span class="${p.done ? "ok" : ""}">${esc(p.name)}</span>`).join("")}</div>`;
+
+function ask() {
+  const d = st;
+  let h = head() + `<div class="card qcard"><h1>${esc(d.q)}</h1></div>`;
+  if (!d.playing) h += `<div class="card waitbox"><h2>Gleich bist du dabei.</h2><p>Ab der nächsten Frage spielst du mit.</p>${doneList()}</div>`;
+  else if (d.mine) h += `<div class="card waitbox"><span class="label">Eingeloggt</span><div class="mine"><span class="${d.mine.answer ? "y" : "n"}">${d.mine.answer ? "Ja" : "Nein"}</span><span>Tipp: ${d.mine.guess} × Ja</span></div>
+      <p>Warte auf die anderen …</p><div id="done">${doneList()}</div></div>`;
+  else {
+    myAns = null;
+    h += `<div class="yn"><button class="yes" data-ans="1">Ja</button><button class="no" data-ans="0">Nein</button></div>
+      <div class="guess"><div><span class="label">Wie viele sagen Ja?</span>
+        <div class="wheel" style="margin-top:8px"><button class="arr" id="minus" aria-label="weniger">‹</button><div style="position:relative"><div class="lens"></div><div class="track" id="track"></div></div><button class="arr" id="plus" aria-label="mehr">›</button></div>
+        <div class="of">von ${d.n} Spieler${d.n === 1 ? "" : "n"}</div></div>
+        <button id="lock" disabled>Antwort einloggen</button></div><div id="done">${doneList()}</div>`;
+  }
+  app.innerHTML = h;
+  if (!d.playing || d.mine) return;
+  app.querySelectorAll("[data-ans]").forEach((b) => b.onclick = () => {
+    myAns = b.dataset.ans === "1";
+    app.querySelectorAll("[data-ans]").forEach((x) => x.classList.toggle("on", x === b));
+    $("#lock").disabled = false;
+  });
+  wheel(d.n, Math.round(d.n / 2));
+  $("#lock").onclick = () => { if (myAns === null) return; $("#lock").disabled = true; out({ a: "answer", answer: myAns, guess: myGuess }); };
+}
+function updateAsk() { const el = $("#done"); if (el && st.phase === "ask") el.innerHTML = doneList(); }
+
+// horizontal number wheel 0 … n: swipe, drag, mouse wheel or arrows; the centred number is the guess
+let drag = null;
+addEventListener("pointermove", (e) => { if (drag) drag.tr.scrollLeft = drag.s - (e.clientX - drag.x); });
+addEventListener("pointerup", () => { if (!drag) return; const { tr } = drag; drag = null; tr.style.scrollSnapType = ""; tr.scrollTo({ left: myGuess * 64, behavior: "smooth" }); });
+function wheel(n, start) {
+  const tr = $("#track"), W = 64;
+  tr.innerHTML = Array.from({ length: n + 1 }, (_, i) => `<span>${i}</span>`).join("");
+  const paint = () => {
+    const x = tr.scrollLeft;
+    myGuess = Math.max(0, Math.min(n, Math.round(x / W)));
+    [...tr.children].forEach((el, i) => {
+      const dist = (i * W - x) / W, a = Math.abs(dist);
+      el.style.transform = `perspective(240px) rotateY(${-dist * 30}deg) scale(${1 - Math.min(a * .14, .5)})`;
+      el.classList.toggle("on", i === myGuess);
+    });
+  };
+  tr.addEventListener("scroll", () => requestAnimationFrame(paint), { passive: true });
+  tr.addEventListener("wheel", (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); tr.scrollBy({ left: Math.sign(e.deltaY) * W, behavior: "smooth" }); } }, { passive: false });
+  // mouse drag (touch scrolls natively)
+  tr.addEventListener("pointerdown", (e) => { if (e.pointerType === "mouse") { drag = { tr, x: e.clientX, s: tr.scrollLeft }; tr.style.scrollSnapType = "none"; } });
+  $("#minus").onclick = () => tr.scrollTo({ left: Math.max(0, myGuess - 1) * W, behavior: "smooth" });
+  $("#plus").onclick = () => tr.scrollTo({ left: Math.min(n, myGuess + 1) * W, behavior: "smooth" });
+  requestAnimationFrame(() => { tr.scrollLeft = start * W; paint(); });
+}
+
+function reveal() {
+  const d = st, r = d.result;
+  const card = (id) => { const p = player(id), g = r.gains[id];
+    return `<div class="pc ${id === d.you ? "me" : ""}"><b>${esc(p.name)}</b><span class="tot">${p.score} Punkte</span>
+      <span class="gain g${g.gain}">${g.gain ? "+" + g.gain : "+0"} · Tipp ${g.guess ?? "–"}${g.gain === 3 ? " · genau!" : ""}</span></div>`; };
+  const col = (ids, cls) => `<div class="col ${cls}">${ids.length ? ids.map(card).join("") : `<div class="nobody">niemand</div>`}</div>`;
+  app.innerHTML = `<div class="top"><span>Frage ${d.round} / ${d.rounds} · Auflösung</span><span id="secs"></span></div>
+    <div class="card qcard"><h2>${esc(d.q)}</h2></div>
+    <div class="reveal">${col(r.yes, "yes")}<div class="mid"><div class="cnt y"><b>${r.yes.length}</b><span>Ja</span></div><div class="cnt n"><b>${r.no.length}</b><span>Nein</span></div></div>${col(r.no, "no")}</div>
+    ${r.none.length ? `<div class="nobody">Keine Antwort: ${r.none.map((id) => esc(nameOf(id))).join(", ")}</div>` : ""}
+    ${d.vip ? `<button id="next">${d.round >= d.rounds ? "Zum Ergebnis" : "Nächste Frage"}</button>` : `<div class="nobody">Gleich geht's weiter …</div>`}`;
+  if (d.vip) $("#next").onclick = () => out({ a: "next" });
+}
+
+function end() {
+  const d = st, ranked = [...d.players].sort((a, b) => b.score - a.score);
+  app.innerHTML = `<h1>Endstand</h1><div class="rank">${ranked.map((p, i) => `<div><i>${i === 0 ? "🏆" : i + 1 + "."}</i><span style="color:${esc(p.color)}">${esc(p.name)}</span><span>${p.score} P.</span></div>`).join("")}</div>
+    ${d.vip ? `<button id="again">Nochmal spielen</button>` : `<div class="nobody">${esc(d.players.find((p) => p.vip)?.name || "Der Boss")} kann eine neue Runde starten.</div>`}
+    ${PARTY ? furidaAd() : ""}`;
+  if (d.vip) $("#again").onclick = () => out({ a: "restart" });
+}
+
+// timer for question and reveal
+setInterval(() => {
+  const left = Math.max(0, ends - Date.now()), s = $("#secs"), bar = $("#tbar");
+  if (s && st && (st.phase === "ask" || st.phase === "reveal")) s.textContent = Math.ceil(left / 1000) + " s";
+  if (bar) { bar.firstChild.style.transform = `scaleX(${Math.min(1, left / (st?.phase === "ask" ? 45000 : 15000))})`; bar.classList.toggle("low", left < 10000); }
+}, 200);
+
+startScreen();
+const q0 = new URLSearchParams(location.search).get("code");
+if (q0 && store.get("js_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("js_name") || "");
+
+// ---------------------------------------------------------------- FURIDA party
+const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
+  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small><span class="fa-go">Spiele entdecken →</span></a>`;
+function usePartyCode() {
+  if (!partyCode || me || joining) return;
+  connect(null, null, false, partyCode);
+  partyCode = null;
+}
+if (PARTY) {
+  const f = document.createElement("iframe");
+  f.src = PARTY + "/overlay";
+  f.title = "Party";
+  f.className = "party"; // hidden until the FURIDA button (or a vote) opens it full screen
+  document.body.append(f);
+  addEventListener("message", (e) => {
+    if (e.origin !== PARTY || e.source !== f.contentWindow || !e.data) return;
+    const m = e.data;
+    if (m.party === "open") f.classList.toggle("open", !!m.on);
+    else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
+    else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
+    else if (m.party === "member") {
+      $("#quit").hidden = $("#partyBtn").hidden = !m.on;
+      document.body.classList.toggle("inparty", !!m.on);
+      $("#partyBtn").classList.toggle("away", !!m.away);
+    }
+  });
+  const askQuit = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
+  document.querySelector(".logo").addEventListener("click", askQuit);
+  $("#quit").onclick = askQuit;
+  $("#partyBtn").onclick = () => f.contentWindow.postMessage({ party: "open" }, PARTY);
+  $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
+  $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
+  $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });
+}
+</script>
+</body>
+</html>
