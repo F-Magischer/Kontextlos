@@ -67,7 +67,7 @@ function view(pl) {
   return {
     t: "state",
     me: { id: pl.id, name: pl.name },
-    games: GAMES.map((g) => ({ id: g.id, name: g.name, tag: g.tag, url: g.url, max: g.max, down: (down.get(g.id) || 0) > now })),
+    games: GAMES.map((g) => ({ id: g.id, name: g.name, tag: g.tag, desc: g.desc, players: g.players, time: g.time, tags: g.tags, art: g.art, url: g.url, max: g.max, down: (down.get(g.id) || 0) > now })),
     party: pa && {
       code: pa.code, leader: pa.leader, anyone: pa.anyone, secs: pa.secs, busy: pa.busy, last: pa.last,
       game: pa.game && pa.game.id,

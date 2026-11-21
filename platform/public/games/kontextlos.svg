@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif">
+  <!-- KONTEXTLOS key art: riso paper, two tapes, fake posts with twisted answers -->
+  <defs>
+    <pattern id="dots" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="7" cy="7" r="2" fill="#1B1A17" opacity=".13"/></pattern>
+    <pattern id="half" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="5" cy="5" r="2.4" fill="#FF4F79"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#EFE7D6"/>
+  <rect width="1600" height="900" fill="url(#dots)"/>
+  <circle cx="1330" cy="170" r="210" fill="url(#half)" opacity=".55"/>
+  <rect x="-200" y="640" width="1100" height="110" fill="#FF4F79" transform="rotate(-24 350 695)" opacity=".95"/>
+  <rect x="900" y="700" width="1100" height="110" fill="#2B59C3" transform="rotate(-24 1450 755)" opacity=".95"/>
+
+  <!-- post 1: breaking news -->
+  <g transform="translate(760 120) rotate(-4)">
+    <rect x="14" y="14" width="620" height="330" fill="#1B1A17"/>
+    <rect width="620" height="330" fill="#FFFDF7" stroke="#1B1A17" stroke-width="6"/>
+    <rect width="620" height="64" fill="#C8372D"/>
+    <text x="28" y="43" font-size="28" fill="#FFFDF7" letter-spacing="3">+++ EILMELDUNG +++ LIVE</text>
+    <text x="28" y="122" font-size="44" fill="#1B1A17">Bär bricht in Freibad ein</text>
+    <text x="28" y="172" font-size="44" fill="#1B1A17">– Polizei ratlos</text>
+    <line x1="28" y1="204" x2="592" y2="204" stroke="#1B1A17" stroke-width="3" stroke-dasharray="10 8" opacity=".4"/>
+    <text x="28" y="244" font-size="20" fill="#1B1A17" opacity=".7" letter-spacing="2">O-TON EINES AUGENZEUGEN</text>
+    <text x="28" y="292" font-size="34" fill="#2B59C3" font-family="Georgia, serif" font-style="italic">„Ich hab einfach weitergegessen.“</text>
+  </g>
+
+  <!-- post 2: chat with mum -->
+  <g transform="translate(1010 470) rotate(3)">
+    <rect x="12" y="12" width="470" height="250" fill="#1B1A17"/>
+    <rect width="470" height="250" fill="#DCE8DF" stroke="#1B1A17" stroke-width="6"/>
+    <rect width="470" height="54" fill="#1F9E6E"/>
+    <text x="24" y="37" font-size="24" fill="#FFFDF7" letter-spacing="2">MAMA · ONLINE</text>
+    <rect x="24" y="78" width="330" height="70" fill="#FFFDF7" stroke="#1B1A17" stroke-width="4"/>
+    <text x="42" y="124" font-size="26" fill="#1B1A17">Schatz, was ist das??</text>
+    <rect x="150" y="164" width="296" height="64" fill="#FF4F79" stroke="#1B1A17" stroke-width="4"/>
+    <text x="168" y="206" font-size="24" fill="#FFFDF7">Mein Lieblingsgeräusch</text>
+  </g>
+
+  <!-- stickers (the left side stays calm: the hub puts the title there) -->
+  <g transform="translate(560 60) rotate(5)">
+    <rect x="10" y="10" width="470" height="92" fill="#1B1A17"/>
+    <rect width="470" height="92" fill="#FFD23F" stroke="#1B1A17" stroke-width="6"/>
+    <text x="28" y="62" font-size="40" fill="#1B1A17">Sag was Harmloses.</text>
+  </g>
+  <g transform="translate(640 500) rotate(-6)">
+    <rect x="8" y="8" width="410" height="78" fill="#1B1A17"/>
+    <rect width="410" height="78" fill="#FF4F79" stroke="#1B1A17" stroke-width="6"/>
+    <text x="26" y="52" font-size="34" fill="#FFFDF7">Wir machen's schlimm.</text>
+  </g>
+</svg>

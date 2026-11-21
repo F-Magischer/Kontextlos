@@ -29,7 +29,23 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 .hr { display: flex; gap: 8px; align-items: center; }
 .quit { width: auto; margin: 0; padding: 5px 7px; line-height: 0; background: var(--white); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
 .modal { position: fixed; inset: 0; z-index: 60; background: rgba(27,26,23,.55); display: flex; align-items: center; justify-content: center; padding: 18px; }
-.modal[hidden], .quit[hidden] { display: none; }
+.modal[hidden], .quit[hidden], .pbtn[hidden] { display: none; }
+body:not(.lobby) .pbtn { display: none; }
+/* FURIDA ad in the lobby: deliberately in FURIDA's own look, not riso */
+.furida-ad { display: grid; gap: 4px; margin-top: 30px; padding: 18px 20px; border-radius: 18px; color: #EEF0FF; text-decoration: none; position: relative; overflow: hidden;
+  background: radial-gradient(120% 140% at 0% 0%, #7C5CFF 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, #22D3EE 0%, transparent 50%), #0E0F1A;
+  box-shadow: 0 14px 40px -16px rgba(124,92,255,.8); transition: transform .2s; }
+.furida-ad:active { transform: scale(.98); }
+.furida-ad .fa-brand { font-weight: 800; font-size: 13px; letter-spacing: .22em; opacity: .85; }
+.furida-ad b { font-size: 22px; line-height: 1.1; letter-spacing: -.02em; }
+.furida-ad small { font-size: 15px; opacity: .8; }
+.furida-ad .fa-go { margin-top: 8px; font-weight: 800; font-size: 15px; justify-self: start; background: #fff; color: #0E0F1A; padding: 7px 14px; border-radius: 999px; }
+.pbtn { width: auto; margin: 0; padding: 3px 8px; font-size: 14px; letter-spacing: .02em; box-shadow: 3px 3px 0 var(--pink); position: relative; }
+.pbtn.away::after { content: "!"; position: absolute; top: -9px; right: -9px; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); font-size: 12px; line-height: 1; padding: 2px 5px; }
+/* narrow phones in a party: FURIDA + door instead of room code and name (the lobby shows both) */
+@media (max-width: 460px) { body.inparty .who { display: none; } }
+iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
+iframe.party.open { width: 100%; height: 100%; visibility: visible; }
 .modal .card { max-width: 420px; width: 100%; transform: rotate(-1deg); animation: slap .35s cubic-bezier(.2,1.4,.4,1) both; }
 .who { display: flex; gap: 6px; align-items: center; font-family: "Brico", sans-serif; font-size: 12px; text-transform: uppercase; }
 .who .code { border: 2px solid var(--ink); padding: 2px 6px; background: var(--yellow); }
@@ -193,7 +209,7 @@ textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font
 </head>
 <body>
 <div class="wrap">
-<header><a class="logo" href="/" title="Zur Startseite"><span>KONTEXT</span>LOS</a><div class="hr"><div class="who" id="who"></div>
+<header><a class="logo" href="/" title="Zur Startseite"><span>KONTEXT</span>LOS</a><div class="hr"><button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><div class="who" id="who"></div>
 <button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
 <div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p>Du verlässt die Party und gehst zurück zur Lobby.</p>
 <button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
@@ -320,6 +336,7 @@ function show(d) {
   cancelAnimationFrame(timerRAF); clearTimeout(endTimer);
   if (d.color) document.documentElement.style.setProperty("--me", d.color);
   app.className = "in";
+  document.body.classList.toggle("lobby", d.s === "lobby"); // the FURIDA button only shows in the lobby, not mid-round
 
   if (d.s === "lobby") {
     const can = d.count >= d.min;
@@ -345,7 +362,9 @@ function show(d) {
         ${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b>
           <button class="ghost tiny" data-kick="${esc(p.id)}">Kicken</button><button class="tiny" data-ban="${esc(p.id)}">Bannen</button></div>`).join("")}
         ${d.banned.map((b) => `<div class="mrow"><s>${esc(b.name)}</s><span class="mono">gebannt</span><button class="ghost tiny" data-unban="${esc(b.dev)}">Entbannen</button></div>`).join("")}` : ""}
-      ${d.hasHost ? "" : `<div class="or mono">Fernseher oder Laptop?</div><a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
+      ${d.hasHost ? "" : `<div class="or mono">Fernseher oder Laptop?</div><a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}
+      ${PARTY ? furidaAd() : ""}`;
+    if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
     $("#copycode").onclick = async () => {
       try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Code kopiert!"; }
       catch { const t = document.createElement("textarea"); t.value = d.party || d.code; document.body.append(t); t.select(); const ok = document.execCommand("copy"); t.remove(); $("#copied").textContent = ok ? "Code kopiert!" : "Kopieren nicht möglich"; }
@@ -442,6 +461,9 @@ if (q0 && store.get("kl_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), sto
 // The overlay hands us a one-time code when our party plays here; we join its room with it.
 const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("kl_party");
 let partyCode = null;
+const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
+  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small>
+  <span class="fa-go">Spiele entdecken →</span></a>`;
 function usePartyCode() {
   if (!partyCode || me || joining) return;
   connect(null, null, false, partyCode);
@@ -451,19 +473,24 @@ if (PARTY) {
   const f = document.createElement("iframe");
   f.src = PARTY + "/overlay";
   f.title = "Party";
-  f.style.cssText = "position:fixed;left:0;bottom:0;width:0;height:0;border:0;z-index:50;background:transparent;color-scheme:normal";
+  f.className = "party"; // hidden until the FURIDA button (or a vote) opens it full screen
   document.body.append(f);
   addEventListener("message", (e) => {
     if (e.origin !== PARTY || e.source !== f.contentWindow || !e.data) return;
     const m = e.data;
-    if (m.party === "size") { f.style.width = `min(${+m.w}px, 100vw)`; f.style.height = `${+m.h}px`; }
+    if (m.party === "open") f.classList.toggle("open", !!m.on);
     else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
     else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
-    else if (m.party === "member") $("#quit").hidden = !m.on; // in a party: logo and door button ask before leaving
+    else if (m.party === "member") { // in a party: FURIDA button, and logo + door button ask before leaving
+      $("#quit").hidden = $("#partyBtn").hidden = !m.on;
+      document.body.classList.toggle("inparty", !!m.on);
+      $("#partyBtn").classList.toggle("away", !!m.away); // the party plays somewhere else
+    }
   });
   const ask = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
   document.querySelector(".logo").addEventListener("click", ask);
   $("#quit").onclick = ask;
+  $("#partyBtn").onclick = () => f.contentWindow.postMessage({ party: "open" }, PARTY);
   $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
   $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
   $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });
