@@ -26,6 +26,11 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 .logo { font-weight: 800; font-size: 26px; letter-spacing: -.02em; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; transition: transform .12s; }
 .logo:hover { transform: rotate(-2deg) scale(1.04); }
 .logo span { background: var(--ink); color: var(--paper); padding: 1px 7px; margin-right: 3px; box-shadow: 3px 3px 0 var(--pink); }
+.hr { display: flex; gap: 8px; align-items: center; }
+.quit { width: auto; margin: 0; padding: 5px 7px; line-height: 0; background: var(--white); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.modal { position: fixed; inset: 0; z-index: 60; background: rgba(27,26,23,.55); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.modal[hidden], .quit[hidden] { display: none; }
+.modal .card { max-width: 420px; width: 100%; transform: rotate(-1deg); animation: slap .35s cubic-bezier(.2,1.4,.4,1) both; }
 .who { display: flex; gap: 6px; align-items: center; font-family: "Brico", sans-serif; font-size: 12px; text-transform: uppercase; }
 .who .code { border: 2px solid var(--ink); padding: 2px 6px; background: var(--yellow); }
 .who b { background: var(--me); color: #fff; padding: 3px 7px; }
@@ -188,7 +193,10 @@ textarea.slot::placeholder { color: inherit; opacity: .5; font-size: .62em; font
 </head>
 <body>
 <div class="wrap">
-<header><a class="logo" href="/" title="Zur Startseite"><span>KONTEXT</span>LOS</a><div class="who" id="who"></div></header>
+<header><a class="logo" href="/" title="Zur Startseite"><span>KONTEXT</span>LOS</a><div class="hr"><div class="who" id="who"></div>
+<button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
+<div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p>Du verlässt die Party und gehst zurück zur Lobby.</p>
+<button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
 <main id="app"></main>
 </div>
 <script>
@@ -220,6 +228,7 @@ function connect(code, name, create = false, party = null) {
     }
     else if (m.t === "error") { me = null; startScreen(m.msg); usePartyCode(); }
     else if (m.t === "msg") show(m.d);
+    else if (m.t === "party" && /^https?:\/\//.test(m.url)) location.href = m.url; // a party room: join via the party
   };
   ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
 }
@@ -320,7 +329,7 @@ function show(d) {
     const left = d.max - d.players.length;
     const free = left > 0 ? `<span class="chip free"><small>noch ${left} Plätze</small>+ ${left === 1 ? "1 frei" : "bis " + d.max}</span>` : "";
     app.innerHTML = `<div class="card joinbox">
-        <div><span class="mono">Raumcode</span><button id="copycode" class="bigcode" title="Code kopieren">${esc(d.code)}</button>
+        <div><span class="mono">${d.party ? "Party-Code" : "Raumcode"}</span><button id="copycode" class="bigcode" title="Code kopieren">${esc(d.party || d.code)}</button>
           <span class="mono" id="copied">Antippen zum Kopieren</span></div>
         <div class="jr"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button id="share" class="small">Link teilen</button></div>
       </div>
@@ -338,8 +347,8 @@ function show(d) {
         ${d.banned.map((b) => `<div class="mrow"><s>${esc(b.name)}</s><span class="mono">gebannt</span><button class="ghost tiny" data-unban="${esc(b.dev)}">Entbannen</button></div>`).join("")}` : ""}
       ${d.hasHost ? "" : `<div class="or mono">Fernseher oder Laptop?</div><a class="btn ghost small" href="${screenHost(d.code)}" target="_blank">Großen Bildschirm dazuschalten</a>`}`;
     $("#copycode").onclick = async () => {
-      try { await navigator.clipboard.writeText(d.code); $("#copied").textContent = "Code kopiert!"; }
-      catch { const t = document.createElement("textarea"); t.value = d.code; document.body.append(t); t.select(); const ok = document.execCommand("copy"); t.remove(); $("#copied").textContent = ok ? "Code kopiert!" : "Kopieren nicht möglich"; }
+      try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Code kopiert!"; }
+      catch { const t = document.createElement("textarea"); t.value = d.party || d.code; document.body.append(t); t.select(); const ok = document.execCommand("copy"); t.remove(); $("#copied").textContent = ok ? "Code kopiert!" : "Kopieren nicht möglich"; }
       $("#copied").classList.add("ok");
     };
     if (d.vip) {
@@ -450,7 +459,14 @@ if (PARTY) {
     if (m.party === "size") { f.style.width = `min(${+m.w}px, 100vw)`; f.style.height = `${+m.h}px`; }
     else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
     else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
+    else if (m.party === "member") $("#quit").hidden = !m.on; // in a party: logo and door button ask before leaving
   });
+  const ask = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
+  document.querySelector(".logo").addEventListener("click", ask);
+  $("#quit").onclick = ask;
+  $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
+  $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
+  $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });
 }
 </script>
 </body>

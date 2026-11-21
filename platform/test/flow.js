@@ -113,6 +113,21 @@ async function guest() {
   cara.say({ t: "join", code });
   await cara.next((m) => m.t === "go");
 
+  // the room's lobby shows the party code, its QR leads to the party invite, typed room codes are sent there too
+  const lob = await pb.next((m) => m.t === "msg" && m.d.s === "lobby");
+  assert.strictEqual(lob.d.party, code);
+  assert.strictEqual(lob.d.link, `${SELF}/p/${code}`);
+  const stranger = await sock(game);
+  stranger.say({ t: "join", code: ja.code, name: "Zoe", dev: "x" });
+  assert.strictEqual((await stranger.next((m) => m.t === "party")).url, `${SELF}/p/${code}`);
+  assert.strictEqual((await fetch(`${SELF}/qr/${code}.png`)).headers.get("content-type"), "image/png");
+
+  // kicked from the party: out of the game room and sent to the hub
+  anna.say({ t: "kick", id: (await ben.next((m) => m.t === "state" && m.party)).me.id });
+  assert.strictEqual((await ben.next((m) => m.t === "go")).url, SELF + "/");
+  assert.match((await pb.next((m) => m.t === "error")).msg, /geworfen/);
+  assert.strictEqual(await pb.closed, 1005);
+
   // unknown game key cannot redeem
   const bad = await fetch(SELF + "/api/redeem", { method: "POST", headers: { authorization: "Bearer nope" }, body: JSON.stringify({ code: "x" }) });
   assert.strictEqual(bad.status, 403);

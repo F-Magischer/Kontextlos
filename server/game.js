@@ -214,7 +214,7 @@ function pushLobby(r) {
   for (const id of r.order)
     to(r, id, { s: "lobby", vip: id === vip(r), count: online(r).length, min: MIN_PLAYERS, max: MAX_PLAYERS,
       players: online(r).map((pid) => ({ id: pid, name: nameOf(r, pid), color: r.players.get(pid).color, vip: pid === vip(r) })),
-      you: id, banned: id === vip(r) ? [...r.banned].map(([dev, name]) => ({ dev, name })) : [], phoneMode: r.phoneMode, showOrigin: r.showOrigin, rounds: r.rounds, roundChoices: ROUND_CHOICES, sameFormat: r.sameFormat, link: `${r.link}/?code=${r.code}`, hasHost: !!r.host });
+      you: id, banned: id === vip(r) ? [...r.banned].map(([dev, name]) => ({ dev, name })) : [], phoneMode: r.phoneMode, showOrigin: r.showOrigin, rounds: r.rounds, roundChoices: ROUND_CHOICES, sameFormat: r.sameFormat, link: r.invite || `${r.link}/?code=${r.code}`, party: r.party || null, hasHost: !!r.host });
 }
 
 function toLobby(r) {

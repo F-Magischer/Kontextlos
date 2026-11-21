@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
+const QRCode = require("qrcode");
 const GAMES = require("./games");
 const { tally } = require("./vote");
 
@@ -19,7 +20,7 @@ const T = { code: MIN, voterGrace: 15 * SEC, leaderGrace: MIN, memberGone: 10 * 
 const MAX_MEMBERS = 20;
 const VOTE_SECS = [20, 30, 60];
 const LETTERS = "BCDFGHJKLMNPQRSTVWXZ"; // no vowels: no accidental words
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf", ".svg": "image/svg+xml" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ttf": "font/ttf", ".svg": "image/svg+xml", ".png": "image/png" };
 const HEAD = {
   "Cache-Control": "no-cache",
   // the overlay is framed by game pages that use COEP (Godot needs it), so it must opt in too
@@ -147,7 +148,7 @@ async function transition(pa, id) {
   let room = null;
   try {
     const r = await fetch(g.api + "/party/prepare", {
-      method: "POST", headers: { authorization: "Bearer " + g.key, "content-type": "application/json" }, body: "{}", signal: AbortSignal.timeout(T.prepare),
+      method: "POST", headers: { authorization: "Bearer " + g.key, "content-type": "application/json" }, body: JSON.stringify({ code: pa.code, invite: `${SELF}/p/${pa.code}` }), signal: AbortSignal.timeout(T.prepare),
     });
     room = r.ok ? String((await r.json()).room || "") : "";
     if (!room) throw new Error("prepare answered " + r.status);
@@ -209,7 +210,12 @@ function onMsg(pl, ws, m) {
       if (!lead || !k || k === pl || !pa.members.includes(k.id)) return;
       pa.banned.add(k.id);
       removeMember(pa, k);
-      return k.sockets.forEach((s) => send(s, { t: "note", msg: "Du wurdest aus der Party entfernt." }));
+      if (pa.game) { // out of the game room too, so they cannot keep playing
+        const g = game(pa.game.id);
+        fetch(g.api + "/party/kick", { method: "POST", headers: { authorization: "Bearer " + g.key, "content-type": "application/json" },
+          body: JSON.stringify({ room: pa.game.room, player: k.id }), signal: AbortSignal.timeout(T.prepare) }).catch((e) => console.error(`[${g.id}] kick: ${e.message}`));
+      }
+      return k.sockets.forEach((s) => { send(s, { t: "note", msg: "Du wurdest aus der Party entfernt." }); send(s, { t: "go", url: SELF + "/" }); });
     }
     case "settings":
       if (!lead || pa.vote) return;
@@ -295,6 +301,12 @@ const server = http.createServer((req, res) => {
     }
     const pl = playerFor(s);
     return json(res, 200, { id: pl.id, name: pl.name }, head);
+  }
+  const qr = p.match(/^\/qr\/([A-Z]{4})\.png$/);
+  if (qr) {
+    return QRCode.toBuffer(`${SELF}/p/${qr[1]}`, { type: "png", margin: 1, scale: 10, color: { dark: "#1B1A17", light: "#FFFDF7" } })
+      .then((png) => res.writeHead(200, { ...HEAD, "Content-Type": "image/png" }).end(png))
+      .catch(() => res.writeHead(500).end());
   }
   if (p === "/api/redeem" && req.method === "POST") return redeem(req, res).catch((e) => { console.error(e); json(res, 500, {}); });
   const f = p === "/" || p === "/overlay" || /^\/p\/[A-Za-z]{4}$/.test(p) ? "index.html" : p.slice(1);

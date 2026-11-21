@@ -34,6 +34,15 @@ async function redeem(code) {
   } catch (e) { console.error("party redeem:", e.message); return null; }
 }
 
+function readJson(req) {
+  return new Promise((ok) => {
+    let b = "";
+    req.on("data", (c) => { b += c; if (b.length > 4096) req.destroy(); });
+    req.on("end", () => { try { ok(JSON.parse(b) || {}); } catch { ok({}); } });
+    req.on("error", () => ok({}));
+  });
+}
+
 function lanUrl() {
   // PUBLIC_URL wins; Render sets RENDER_EXTERNAL_URL (https://<name>.onrender.com) on its own
   const pub = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
@@ -45,16 +54,29 @@ function lanUrl() {
 
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  if (p === "/party/prepare" && req.method === "POST") {
+  if (p.startsWith("/party/") && req.method === "POST") {
     if (!partyAuth(req.headers.authorization || "")) return res.writeHead(403).end();
-    const r = newRoom();
-    maybeCleanup(r); // nobody may ever come
-    return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ room: r.code }));
+    return readJson(req).then((b) => {
+      if (p === "/party/prepare") {
+        const r = newRoom();
+        // party rooms: QR codes and links lead to the party invite, so newcomers join the party first
+        if (/^https?:\/\/[^\s"<>]+$/.test(b.invite || "")) { r.invite = b.invite; r.party = String(b.code || "").slice(0, 8); }
+        maybeCleanup(r); // nobody may ever come
+        return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ room: r.code }));
+      }
+      if (p === "/party/kick") { // removed from the party: also out of the game room
+        const r = rooms.get(String(b.room || ""));
+        const hit = r && [...r.players].find(([, q]) => q.dev === "party:" + String(b.player || ""));
+        if (hit) G.kick(r, hit[0], false);
+        return res.writeHead(204).end();
+      }
+      res.writeHead(404).end();
+    });
   }
   if (p === "/data") return S.page(req, res, live()).catch((e) => { console.error(e); res.writeHead(500).end("Fehler: " + e.message); });
   const qr = p.match(/^\/qr\/([A-Z]{4})\.png$/);
   if (qr) {
-    QRCode.toBuffer(`${lanUrl()}/?code=${qr[1]}`, { type: "png", margin: 1, scale: 10, color: { dark: "#1B1A17", light: "#FFFDF7" } })
+    QRCode.toBuffer(rooms.get(qr[1])?.invite || `${lanUrl()}/?code=${qr[1]}`, { type: "png", margin: 1, scale: 10, color: { dark: "#1B1A17", light: "#FFFDF7" } })
       .then((png) => res.writeHead(200, { "Content-Type": "image/png", "Cross-Origin-Resource-Policy": "same-origin" }).end(png))
       .catch(() => res.writeHead(500).end());
     return;
@@ -178,6 +200,7 @@ wss.on("connection", (ws) => {
       const old = typeof m.pid === "string" && r.players.get(m.pid);
       if (old && old.kicked) return send(ws, { t: "error", msg: "Du wurdest aus dem Raum geworfen." });
       if (old) return rejoinAs(r, m.pid, old);
+      if (r.invite) return send(ws, { t: "party", url: r.invite }); // a party plays here: join the party first
       for (const p of r.players.values())
         if (p.name.toLowerCase() === name.toLowerCase()) return send(ws, { t: "error", msg: "Name ist schon vergeben." });
       if (r.players.size >= G.MAX_PLAYERS) return send(ws, { t: "error", msg: "Raum ist voll." });
