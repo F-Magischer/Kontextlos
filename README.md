@@ -11,6 +11,7 @@ game/     Godot 4.7 – der große Bildschirm (zeigt nur an, was der Server schi
 server/   Node – Spiellogik (game.js), Räume, Texte (content.js), Handy-Seite (public/index.html), QR-Codes
 platform/ Node – FURIDA-Party-Service + Hub (play.furida.workers.dev): Gast-Identität, Partys, Spielwahl, Übergabe an Spiele
 jasager/  Node – JA-SAGER, zweites FURIDA-Spiel (jasager.furida.workers.dev): Ja/Nein-Fragen, schätzen wie viele Ja sagen. Test: cd jasager; npm test
+gruenderfieber/ Node – GRÜNDERFIEBER, drittes FURIDA-Spiel (gruenderfieber.furida.workers.dev): Produkt erfinden, zeichnen, pitchen, Spielgeld einsammeln. Test: cd gruenderfieber; npm test
 cloudflare/ Worker, der eine Render-App unter *.furida.workers.dev durchreicht
 ```
 

@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101418">
+<title>GRÜNDERFIEBER</title>
+<link rel="preload" href="fonts/BricolageGrotesque.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; font-display: swap; }
+/* pitch-deck look: dark slate, mint for money, gold for highlights */
+:root { --bg: #101418; --s1: #181E25; --s2: #222A33; --line: rgba(242,245,247,.10); --text: #F2F5F7; --muted: #93A1AE; --mint: #3DDC97; --gold: #FFC857; --coral: #FF6B6B; --blue: #5B8CFF; }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--text); }
+body { min-height: 100dvh; font: 17px/1.45 "Brico", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
+  background-image: radial-gradient(circle at 90% -10%, rgba(61,220,151,.20), transparent 40%), radial-gradient(circle at -10% 110%, rgba(255,200,87,.14), transparent 40%),
+  linear-gradient(rgba(242,245,247,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(242,245,247,.035) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px; background-attachment: fixed; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 16px 40px; min-height: 100dvh; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 14px; }
+.logo { font-weight: 800; font-size: 21px; letter-spacing: .04em; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: transform .15s; }
+.logo i { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--mint), var(--gold)); display: grid; place-items: center; font-style: normal; color: var(--bg); font-size: 15px; }
+.logo:active { transform: scale(.95); }
+.hr { display: flex; gap: 8px; align-items: center; }
+.who { display: flex; gap: 6px; align-items: center; font-weight: 800; font-size: 13px; }
+.who .code { background: var(--s2); border: 1px solid var(--line); padding: 3px 9px; border-radius: 8px; letter-spacing: .12em; }
+.who b { background: var(--me, var(--mint)); color: var(--bg); padding: 3px 9px; border-radius: 8px; }
+main { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: clamp(30px, 7vw, 54px); line-height: 1.02; letter-spacing: -.03em; font-weight: 800; }
+h2 { font-size: 24px; letter-spacing: -.02em; font-weight: 800; }
+.label { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.mint { color: var(--mint); }
+.card { background: var(--s1); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+button, .btn { font: 800 19px "Brico", system-ui, sans-serif; color: var(--bg); background: var(--mint); border: 0; border-radius: 14px; padding: 14px 18px; cursor: pointer;
+  transition: transform .1s, filter .1s; text-align: center; text-decoration: none; display: block; width: 100%; box-shadow: 0 10px 30px -14px rgba(61,220,151,.8); }
+button:hover { filter: brightness(1.07); } button:active { transform: scale(.97); }
+button:disabled { opacity: .35; cursor: default; transform: none; }
+button.ghost { background: var(--s2); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
+button.gold { background: var(--gold); box-shadow: 0 10px 30px -14px rgba(255,200,87,.8); }
+button.small { font-size: 15px; padding: 9px 12px; width: auto; border-radius: 10px; }
+input { width: 100%; font: 700 19px "Brico", sans-serif; color: var(--text); background: var(--s2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; outline: none; }
+input:focus { border-color: var(--mint); box-shadow: 0 0 0 3px rgba(61,220,151,.25); }
+input#code { letter-spacing: .3em; text-transform: uppercase; }
+.err { background: var(--coral); color: #fff; border-radius: 12px; padding: 10px 14px; font-weight: 800; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 800; font-size: 13px; } .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.stack { display: grid; gap: 12px; }
+.row2 { display: grid; gap: 12px; } @media (min-width: 760px) { .row2 { grid-template-columns: 1fr 1fr; } }
+
+.start { display: grid; gap: 22px; align-content: center; flex: 1; }
+@media (min-width: 820px) { .start { grid-template-columns: 1.15fr 1fr; column-gap: 60px; } .start h1 { font-size: 66px; } }
+.steps { display: flex; flex-wrap: wrap; gap: 8px; } .steps span { background: var(--s2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 14px; }
+.steps b { color: var(--mint); margin-right: 5px; }
+
+/* lobby */
+.joinbox { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: linear-gradient(135deg, rgba(61,220,151,.18), rgba(255,200,87,.12)), var(--s1); }
+.bigcode { font-size: 40px; letter-spacing: .16em; background: var(--bg); color: var(--text); width: auto; display: inline-block; padding: 6px 14px; margin: 6px 0; box-shadow: none; border: 1px solid var(--line); }
+.qr { width: 136px; height: 136px; border-radius: 14px; background: #fff; padding: 5px; display: block; image-rendering: pixelated; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { color: var(--bg); font-weight: 800; padding: 6px 12px; border-radius: 12px; }
+.chip small { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; }
+.chip.off { opacity: .35; }
+.seg { display: flex; gap: 8px; } .seg button { flex: 1; font-size: 17px; padding: 10px; background: var(--s2); color: var(--text); box-shadow: none; border: 1px solid var(--line); } .seg button.on { background: var(--mint); color: var(--bg); }
+.mrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); } .mrow b { flex: 1; }
+
+/* round header + timer */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 800; }
+.tbar { height: 8px; border-radius: 99px; background: var(--s2); overflow: hidden; }
+.tbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--mint), var(--gold)); transform-origin: left; }
+.tbar.low i { background: var(--coral); }
+
+/* brief cards */
+.brief { display: grid; gap: 10px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .brief { grid-template-columns: repeat(3, 1fr); } }
+.bc { border-radius: 16px; padding: 14px 16px; color: var(--bg); font-weight: 800; font-size: 19px; line-height: 1.2; animation: deal .5s cubic-bezier(.2,1.3,.4,1) both; }
+.bc small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .65; margin-bottom: 4px; }
+.bc.a { background: var(--mint); transform: rotate(-1deg); } .bc.b { background: var(--gold); animation-delay: .08s; transform: rotate(.8deg); } .bc.c { background: #F2F5F7; animation-delay: .16s; transform: rotate(-.5deg); }
+@keyframes deal { from { opacity: 0; transform: translateY(16px) rotate(-6deg) scale(.9); } }
+
+/* drawing pad */
+.pad { display: grid; gap: 10px; }
+canvas { width: 100%; aspect-ratio: 4 / 3; background: #fff; border-radius: 16px; touch-action: none; display: block; cursor: crosshair; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sw { width: 34px; height: 34px; border-radius: 50%; padding: 0; border: 3px solid transparent; box-shadow: none; flex: none; }
+.sw.on { border-color: var(--text); }
+.sz { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; background: var(--s2); border: 1px solid var(--line); box-shadow: none; border-radius: 10px; }
+.sz i { background: var(--text); border-radius: 50%; display: block; }
+.sz.on { border-color: var(--mint); }
+.tools .sp { flex: 1; }
+
+/* product card */
+.product { display: grid; gap: 14px; }
+@media (min-width: 760px) { .product { grid-template-columns: 1.2fr 1fr; align-items: center; } }
+.product img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 16px; display: block; }
+.product .pn { font-size: clamp(28px, 6vw, 44px); font-weight: 800; letter-spacing: -.03em; line-height: 1.02; }
+.product .sl { font-size: 20px; color: var(--gold); font-style: italic; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; } .tags span { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--s2); border: 1px solid var(--line); }
+.spot { text-align: center; padding: 22px; background: linear-gradient(135deg, rgba(61,220,151,.25), rgba(255,200,87,.18)), var(--s1); }
+.tips { display: grid; gap: 6px; text-align: left; } .tips li { margin-left: 18px; }
+
+/* invest */
+.money { font-size: clamp(40px, 10vw, 64px); font-weight: 800; letter-spacing: -.03em; color: var(--mint); text-align: center; }
+input[type=range] { -webkit-appearance: none; appearance: none; height: 12px; padding: 0; border-radius: 99px; background: linear-gradient(90deg, var(--mint) var(--p, 0%), var(--s2) var(--p, 0%)); border: 0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; border-radius: 50%; background: var(--gold); border: 4px solid var(--bg); box-shadow: 0 0 0 2px var(--gold); }
+input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); border: 4px solid var(--bg); }
+.quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } .quick button { font-size: 14px; padding: 9px 4px; background: var(--s2); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
+.progress { text-align: center; font-weight: 800; color: var(--muted); }
+
+/* results */
+.res { display: grid; grid-template-columns: 96px 1fr auto; gap: 14px; align-items: center; animation: up .45s cubic-bezier(.16,1,.3,1) both; }
+.res img { width: 96px; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 10px; }
+.res .amt { font-size: 22px; font-weight: 800; color: var(--mint); text-align: right; }
+.res .by { font-size: 13px; color: var(--muted); }
+.res.first { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 14px 40px -20px rgba(255,200,87,.7); }
+.rank { display: grid; gap: 8px; }
+.rank div { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.rank div:first-child { background: linear-gradient(135deg, rgba(255,200,87,.3), rgba(61,220,151,.2)), var(--s1); font-size: 19px; }
+.rank .m { color: var(--mint); }
+.done span { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 14px; background: var(--s2); color: var(--muted); }
+.done span.ok { color: var(--text); } .done span.ok::before { content: "✓ "; color: var(--mint); }
+@keyframes up { from { opacity: 0; transform: translateY(14px); } }
+
+/* party: FURIDA button only in the lobby, quit dialog, party page iframe */
+.modal { position: fixed; inset: 0; z-index: 60; background: rgba(5,8,10,.65); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.modal[hidden], .quit[hidden], .pbtn[hidden] { display: none; }
+.modal .card { max-width: 420px; width: 100%; display: grid; gap: 10px; animation: up .3s both; }
+.quit { width: auto; padding: 6px 8px; line-height: 0; background: var(--s2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; box-shadow: none; }
+.pbtn { width: auto; padding: 5px 10px; font-size: 13px; letter-spacing: .1em; border-radius: 10px; background: linear-gradient(100deg, #7C5CFF, #22D3EE); color: #fff; position: relative; box-shadow: none; }
+.pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--gold); color: var(--bg); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
+body:not(.lobby) .pbtn { display: none; }
+@media (max-width: 460px) { body.inparty .who { display: none; } }
+iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
+iframe.party.open { width: 100%; height: 100%; visibility: visible; }
+.furida-ad { display: grid; gap: 4px; padding: 18px 20px; border-radius: 20px; color: #EEF0FF; text-decoration: none;
+  background: radial-gradient(120% 140% at 0% 0%, #7C5CFF 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, #22D3EE 0%, transparent 50%), #0E0F1A; box-shadow: 0 14px 40px -16px rgba(124,92,255,.8); }
+.furida-ad .fa-brand { font-weight: 800; font-size: 13px; letter-spacing: .22em; opacity: .85; }
+.furida-ad b { font-size: 22px; line-height: 1.1; } .furida-ad small { font-size: 15px; opacity: .8; }
+.furida-ad .fa-go { margin-top: 8px; font-weight: 800; font-size: 15px; justify-self: start; background: #fff; color: #0E0F1A; padding: 7px 14px; border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="logo" href="/" title="Zur Startseite"><i>€</i>GRÜNDERFIEBER</a><div class="hr">
+<button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><div class="who" id="who"></div>
+<button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
+<main id="app"></main>
+</div>
+<div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p class="muted">Du verlässt die Party und gehst zurück zur Lobby.</p>
+<button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+const devId = () => { let d = store.get("gf_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("gf_dev", d); } return d; };
+const eur = (k) => (k * 1000).toLocaleString("de-DE") + " €";
+// FURIDA party overlay: only on the platform domain (local tests: localStorage gf_party = "http://localhost:8090")
+const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("gf_party");
+const PHASE_SECS = { develop: 180, talk: 60, invest: 25, results: 25 };
+let ws, me = null, joining = false, st = null, shown = "", ends = 0, partyCode = null;
+// the drawing lives outside the DOM, so redraws of the screen never lose it
+let strokes = [], ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, invest = 0;
+
+function connect(code, name, create = false, party = null) {
+  joining = true;
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+  ws.onopen = () => ws.send(JSON.stringify(party ? { t: "join", party } : create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("gf_pid_" + code) }));
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === "joined" || m.t === "error") joining = false;
+    if (m.t === "joined") {
+      if (window.GF_BUILD && m.build !== window.GF_BUILD) return location.reload(); // new version deployed: load it
+      window.GF_BUILD = m.build;
+      me = m; store.set("gf_pid_" + m.code, m.id); store.set("gf_name", m.name);
+      history.replaceState(null, "", "?code=" + m.code);
+    }
+    else if (m.t === "error") { me = null; startScreen(m.msg); usePartyCode(); }
+    else if (m.t === "party" && /^https?:\/\//.test(m.url)) location.href = m.url; // a party plays here: join it first
+    else if (m.t === "state") show(m.d);
+  };
+  ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
+}
+const out = (d) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
+
+function startScreen(err) {
+  shown = ""; st = null; document.body.classList.remove("lobby");
+  $("#who").innerHTML = "";
+  const code0 = new URLSearchParams(location.search).get("code") || "";
+  app.innerHTML = `<div class="start">
+    <div class="stack"><span class="label">Partyspiel · 3–12 Leute</span><h1>Erfinde Unsinn.<br><span class="mint">Verkauf ihn teuer.</span></h1>
+      <p class="muted">Du ziehst drei Karten, erfindest daraus ein Produkt, zeichnest es und pitchst es den anderen. Die investieren Spielgeld – wer am meisten Kapital einsammelt, gewinnt.</p>
+      <div class="steps"><span><b>1</b>Karten ziehen</span><span><b>2</b>Produkt zeichnen</span><span><b>3</b>Pitchen</span><span><b>4</b>Kapital kassieren</span></div></div>
+    <div class="card stack">${err ? `<div class="err">${esc(err)}</div>` : ""}
+      <div><label class="label" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("gf_name") || "")}"></div>
+      <div><label class="label" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
+      <button id="go">Mitspielen</button><div class="or">oder</div><button id="new" class="ghost">Neuen Raum erstellen</button></div></div>`;
+  $("#go").onclick = () => {
+    const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
+    if (!name) return startScreen("Erst deinen Namen eingeben.");
+    if (code.length !== 4) return startScreen("Der Raumcode hat 4 Buchstaben. Neuer Raum? Dann unten erstellen.");
+    $("#go").disabled = true; connect(code, name);
+  };
+  $("#new").onclick = () => { const name = $("#name").value.trim(); if (!name) return startScreen("Erst deinen Namen eingeben."); $("#new").disabled = true; connect("", name, true); };
+  for (const id of ["name", "code"]) $("#" + id).onkeydown = (e) => { if (e.key === "Enter") $("#go").click(); };
+}
+
+// ---------------------------------------------------------------- screens
+const player = (id) => st.players.find((p) => p.id === id);
+const doneList = (ids) => `<div class="done">${st.players.filter((p) => p.online).map((p) => `<span class="${ids.has(p.id) ? "ok" : ""}">${esc(p.name)}</span>`).join("")}</div>`;
+const head = (what) => `<div class="top"><span>Runde ${st.round} / ${st.rounds} · ${what}</span><span id="secs"></span></div><div class="tbar" id="tbar"><i></i></div>`;
+const briefCards = (b) => `<div class="brief"><div class="bc a"><small>Was</small>${esc(b.what)}</div><div class="bc b"><small>Für wen</small>${esc(b.who)}</div><div class="bc c"><small>Welches Problem</small>${esc(b.problem)}</div></div>`;
+const productCard = (p) => `<div class="card product"><img src="${esc(p.img)}" alt="Zeichnung von ${esc(p.product)}">
+  <div class="stack"><span class="label">von ${esc(p.name)}</span><div class="pn">${esc(p.product)}</div>${p.slogan ? `<div class="sl">„${esc(p.slogan)}“</div>` : ""}
+  <div class="tags"><span>${esc(p.brief.what)}</span><span>${esc(p.brief.who)}</span><span>${esc(p.brief.problem)}</span></div></div></div>`;
+
+function show(d) {
+  st = d;
+  ends = Date.now() + d.left;
+  document.body.classList.toggle("lobby", d.phase === "lobby");
+  const you = player(d.you);
+  if (you) { document.documentElement.style.setProperty("--me", you.color); $("#who").innerHTML = `<span class="code">${esc(d.party || d.code)}</span><b>${esc(you.name)}</b>`; }
+  const p = d.pitch;
+  const key = d.phase === "develop" ? `dev:${d.round}:${d.submitted}:${d.playing}:${d.rerolled}`
+    : d.phase === "pitch" ? `pitch:${d.round}:${p.index}:${d.stage}:${p.mine !== null}`
+    : d.phase === "results" || d.phase === "end" ? `${d.phase}:${d.round}:${d.vip}`
+    : "lobby:" + JSON.stringify(d.players) + d.rounds + d.vip;
+  if (key === shown) return update();
+  shown = key;
+  ({ lobby, develop, pitch, results: resultsScreen, end })[d.phase]();
+}
+// small live bits that change without redrawing the screen
+function update() {
+  if (st.phase === "develop") { const el = $("#done"); if (el) el.innerHTML = doneList(new Set(st.players.filter((p) => p.done).map((p) => p.id))); }
+  if (st.phase === "pitch") { const el = $("#progress"); if (el) el.textContent = `${st.pitch.decided} von ${st.pitch.needed} Investoren haben entschieden`; }
+}
+
+function lobby() {
+  const d = st, on = d.players.filter((p) => p.online);
+  app.innerHTML = `<div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
+      <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
+    <div class="stack"><span class="label">${on.length} / ${d.max} Gründer:innen</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
+    ${d.vip ? `<div class="stack"><span class="label">Runden (jede:r pitcht einmal pro Runde)</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
+      <button id="start" ${on.length >= d.min ? "" : "disabled"}>${on.length >= d.min ? "Alle da – los geht's!" : `Noch ${d.min - on.length} fehlen`}</button></div>
+      ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
+      : `<div class="card"><p>${d.rounds} ${d.rounds === 1 ? "Runde" : "Runden"}. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
+    <div class="card stack"><h2>So geht's</h2>
+      <p class="muted"><b>1.</b> Du ziehst drei Karten: was, für wen, welches Problem. Einmal pro Runde darfst du neu ziehen.</p>
+      <p class="muted"><b>2.</b> In 3 Minuten zeichnest du dein Produkt und gibst ihm Namen und Slogan.</p>
+      <p class="muted"><b>3.</b> Reihum pitcht jede:r eine Minute lang – laut, vor allen.</p>
+      <p class="muted"><b>4.</b> Nach jedem Pitch investieren die anderen aus ihrem Rundenbudget von ${eur(d.budgetMax)}. Wer am Ende das meiste Kapital eingesammelt hat, gewinnt.</p></div>
+    ${PARTY ? furidaAd() : ""}`;
+  $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Kopiert!"; } catch { $("#copied").textContent = d.party || d.code; } };
+  $("#share").onclick = async () => {
+    try { if (navigator.share) await navigator.share({ title: "GRÜNDERFIEBER", text: "Spiel mit! Code " + (d.party || d.code), url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
+    catch (e) { if (e.name !== "AbortError") $("#share").textContent = d.link; }
+  };
+  if (d.vip) {
+    $("#start").onclick = () => out({ a: "start" });
+    app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "rounds", value: +b.dataset.rounds }));
+    app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
+  }
+  if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
+}
+
+// ---------------------------------------------------------------- develop: brief, drawing, name, slogan
+function develop() {
+  const d = st;
+  if (sentRound !== d.round && !d.submitted && d.round !== develop.round) { strokes = []; pname = ""; pslogan = ""; develop.round = d.round; }
+  const done = new Set(d.players.filter((p) => p.done).map((p) => p.id));
+  if (!d.playing) { app.innerHTML = head("Entwickeln") + `<div class="card stack"><h2>Gleich bist du dabei.</h2><p class="muted">Ab der nächsten Runde gründest du mit.</p><div id="done">${doneList(done)}</div></div>`; return; }
+  if (d.submitted) {
+    app.innerHTML = head("Entwickeln") + `<div class="card stack" style="text-align:center"><span class="label">Eingereicht</span><h2>${esc(pname || "Deine Idee")}</h2>
+      <p class="muted">Bereite deinen Pitch vor: Was ist es? Welches Problem löst es? Warum muss man es haben?</p><div id="done">${doneList(done)}</div></div>`;
+    return;
+  }
+  const COLS = ["#101418", "#FF6B6B", "#3DDC97", "#5B8CFF", "#FFC857", "#C77DFF", "#8B5A2B", "#FFFFFF"];
+  app.innerHTML = head("Entwickeln") + briefCards(d.brief)
+    + (d.rerolled ? "" : `<button class="ghost small" id="reroll">Neue Karten ziehen (1× pro Runde)</button>`)
+    + `<div class="card pad"><canvas id="pad" width="800" height="600"></canvas>
+      <div class="tools">${COLS.map((c) => `<button class="sw ${c === ink ? "on" : ""}" data-c="${c}" style="background:${c}" title="${c === "#FFFFFF" ? "Radierer" : "Farbe"}"></button>`).join("")}
+        <span class="sp"></span>${[4, 8, 18].map((s) => `<button class="sz ${s === size ? "on" : ""}" data-s="${s}" aria-label="Pinsel ${s}"><i style="width:${s + 2}px;height:${s + 2}px"></i></button>`).join("")}
+        <button class="small ghost" id="undo">Zurück</button><button class="small ghost" id="clear">Leeren</button></div></div>
+    <div class="row2"><div><label class="label" for="pname">Produktname</label><input id="pname" maxlength="30" placeholder="z. B. Sockenradar 3000" value="${esc(pname)}"></div>
+      <div><label class="label" for="pslogan">Slogan</label><input id="pslogan" maxlength="90" placeholder="z. B. Nie wieder einsam im Trockner." value="${esc(pslogan)}"></div></div>
+    <button id="submit" class="gold">Idee einreichen</button><div id="done">${doneList(done)}</div>`;
+  if (!d.rerolled) $("#reroll").onclick = () => out({ a: "reroll" });
+  $("#pname").oninput = (e) => { pname = e.target.value; };
+  $("#pslogan").oninput = (e) => { pslogan = e.target.value; };
+  app.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => { ink = b.dataset.c; app.querySelectorAll("[data-c]").forEach((x) => x.classList.toggle("on", x === b)); });
+  app.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { size = +b.dataset.s; app.querySelectorAll("[data-s]").forEach((x) => x.classList.toggle("on", x === b)); });
+  $("#undo").onclick = () => { strokes.pop(); paint(); };
+  $("#clear").onclick = () => { strokes = []; paint(); };
+  $("#submit").onclick = submit;
+  drawing($("#pad"));
+}
+function paint() {
+  const cv = $("#pad"); if (!cv) return;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height);
+  g.lineCap = g.lineJoin = "round";
+  for (const s of strokes) {
+    g.strokeStyle = s.c; g.lineWidth = s.w; g.beginPath();
+    s.p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    if (s.p.length === 1) g.lineTo(s.p[0][0] + .1, s.p[0][1]);
+    g.stroke();
+  }
+}
+function drawing(cv) {
+  paint();
+  let cur = null;
+  const at = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
+  cv.onpointerdown = (e) => { cv.setPointerCapture(e.pointerId); cur = { c: ink, w: ink === "#FFFFFF" ? size * 3 : size, p: [at(e)] }; strokes.push(cur); paint(); };
+  cv.onpointermove = (e) => { if (!cur) return; cur.p.push(at(e)); paint(); };
+  cv.onpointerup = cv.onpointercancel = () => { cur = null; };
+}
+function submit() {
+  if (!st || st.phase !== "develop" || st.submitted || sentRound === st.round) return;
+  sentRound = st.round;
+  paint();
+  out({ a: "submit", name: pname, slogan: pslogan, img: $("#pad") ? $("#pad").toDataURL("image/png") : blank() });
+}
+const blank = () => { const c = document.createElement("canvas"); c.width = 800; c.height = 600; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 800, 600); return c.toDataURL("image/png"); };
+
+// ---------------------------------------------------------------- pitch + invest
+function pitch() {
+  const d = st, p = d.pitch, mine = p.id === d.you, investor = d.playing && !mine;
+  const top = head(d.stage === "talk" ? `Pitch ${p.index} / ${p.count}` : "Investieren");
+  if (d.stage === "talk") {
+    app.innerHTML = top + (mine
+      ? `<div class="card spot stack"><h1>Du bist dran!</h1><p>Überzeug die Investoren – laut und mit voller Überzeugung.</p>
+          <ul class="tips muted"><li>Was ist dein Produkt?</li><li>Welches Problem löst es?</li><li>Warum muss man es haben?</li><li>Was macht es einzigartig?</li></ul></div>`
+      : `<div class="card spot"><h2>${esc(p.name)} pitcht gerade</h2><p class="muted">Hör gut zu – gleich wird investiert.</p></div>`)
+      + productCard(p) + (mine || d.vip ? `<button id="done" class="${mine ? "gold" : "ghost"}">${mine ? "Pitch beenden" : "Pitch überspringen"}</button>` : "");
+    if (mine || d.vip) $("#done").onclick = () => out({ a: "done" });
+    return;
+  }
+  let h = top + productCard(p);
+  if (investor && p.mine === null && d.budget > 0) {
+    invest = 0;
+    h += `<div class="card stack"><div class="top"><span>Wie viel investierst du in ${esc(p.product)}?</span><span class="muted">Budget: ${eur(d.budget)}</span></div>
+      <div class="money" id="amt">${eur(0)}</div>
+      <input type="range" id="slider" min="0" max="${d.budget}" step="${d.step}" value="0">
+      <div class="quick">${[0, 10, 25, 50, d.budget].map((v, i) => `<button data-q="${Math.min(v, d.budget)}">${i === 4 ? "Alles" : v ? v + "k" : "0"}</button>`).join("")}</div>
+      <div class="row2"><button class="ghost" id="pass">Passen</button><button id="invest">Investieren</button></div></div>`;
+  } else if (investor) {
+    h += `<div class="card stack" style="text-align:center">${p.mine !== null ? `<span class="label">Deine Entscheidung</span><div class="money">${p.mine ? eur(p.mine) : "Gepasst"}</div>` : `<h2>Dein Budget ist aufgebraucht.</h2>`}
+      <p class="muted">Restbudget diese Runde: ${eur(d.budget)}</p></div>`;
+  } else {
+    h += `<div class="card spot"><h2>${mine ? "Die Investoren entscheiden …" : "Die anderen investieren …"}</h2></div>`;
+  }
+  h += `<div class="progress" id="progress">${p.decided} von ${p.needed} Investoren haben entschieden</div>`;
+  app.innerHTML = h;
+  if (investor && p.mine === null && d.budget > 0) {
+    const set = (v) => { invest = v; $("#slider").value = v; $("#amt").textContent = eur(v); $("#slider").style.setProperty("--p", (d.budget ? v / d.budget * 100 : 0) + "%"); };
+    $("#slider").oninput = (e) => set(+e.target.value);
+    app.querySelectorAll("[data-q]").forEach((b) => b.onclick = () => set(+b.dataset.q));
+    $("#invest").onclick = () => out({ a: "invest", amount: invest });
+    $("#pass").onclick = () => out({ a: "invest", amount: 0 });
+  }
+}
+// an investor with no money left decides automatically: nothing
+setInterval(() => { if (st?.phase === "pitch" && st.stage === "invest" && st.playing && st.pitch.id !== st.you && st.pitch.mine === null && st.budget === 0) out({ a: "invest", amount: 0 }); }, 1000);
+
+// ---------------------------------------------------------------- results + end
+const resultList = (list) => list.map((r, i) => `<div class="card res ${i === 0 && r.raised ? "first" : ""}" style="animation-delay:${i * .07}s"><img src="${esc(r.img)}" alt="">
+  <div><b>${esc(r.product)}</b><div class="by">von ${esc(r.name)}${r.investors.length ? " · " + r.investors.map((x) => `${esc(x.name)} ${x.amount}k`).join(", ") : " · keine Investoren"}</div></div>
+  <div class="amt">${eur(r.raised)}</div></div>`).join("");
+const ranking = () => `<div class="rank">${[...st.players].sort((a, b) => b.money - a.money).map((p, i) => `<div><span>${i === 0 ? "🏆" : i + 1 + "."}</span><span style="color:${esc(p.color)}">${esc(p.name)}</span><span class="m">${eur(p.money)}</span></div>`).join("")}</div>`;
+
+function resultsScreen() {
+  const d = st;
+  app.innerHTML = head("Ergebnis") + `<h2>Wer hat die Investoren überzeugt?</h2>${resultList(d.results.list)}
+    <h2>Gesamtkapital</h2>${ranking()}
+    ${d.vip ? `<button id="next">Nächste Runde</button>` : `<p class="progress">Gleich geht's weiter …</p>`}`;
+  if (d.vip) $("#next").onclick = () => out({ a: "next" });
+}
+function end() {
+  const d = st, best = [...d.players].sort((a, b) => b.money - a.money)[0];
+  app.innerHTML = `<div class="card spot stack"><span class="label">Endstand</span><h1>${esc(best?.name || "")} ist Gründer:in des Jahres!</h1><div class="money">${eur(best?.money || 0)}</div></div>
+    ${ranking()}${d.results ? `<h2>Letzte Runde</h2>${resultList(d.results.list)}` : ""}
+    ${d.vip ? `<button id="again">Nochmal spielen</button>` : `<p class="progress">${esc(d.players.find((p) => p.vip)?.name || "Der Boss")} kann eine neue Runde starten.</p>`}
+    ${PARTY ? furidaAd() : ""}`;
+  if (d.vip) $("#again").onclick = () => out({ a: "restart" });
+  if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
+}
+
+// timer; at the end of developing, phones hand in whatever they have
+setInterval(() => {
+  if (!st) return;
+  const left = Math.max(0, ends - Date.now()), s = $("#secs"), bar = $("#tbar");
+  const total = (PHASE_SECS[st.phase === "pitch" ? st.stage : st.phase] || 60) * 1000;
+  if (s) s.textContent = Math.ceil(left / 1000) + " s";
+  if (bar) { bar.firstChild.style.transform = `scaleX(${Math.min(1, left / total)})`; bar.classList.toggle("low", left < 10000); }
+  if (st.phase === "develop" && st.playing && !st.submitted && left < 1500) submit();
+}, 200);
+
+startScreen();
+const q0 = new URLSearchParams(location.search).get("code");
+if (q0 && store.get("gf_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("gf_name") || "");
+
+// ---------------------------------------------------------------- FURIDA party
+const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
+  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small><span class="fa-go">Spiele entdecken →</span></a>`;
+function usePartyCode() {
+  if (!partyCode || me || joining) return;
+  connect(null, null, false, partyCode);
+  partyCode = null;
+}
+if (PARTY) {
+  const f = document.createElement("iframe");
+  f.src = PARTY + "/overlay";
+  f.title = "Party";
+  f.className = "party"; // hidden until the FURIDA button (or a vote) opens it full screen
+  document.body.append(f);
+  addEventListener("message", (e) => {
+    if (e.origin !== PARTY || e.source !== f.contentWindow || !e.data) return;
+    const m = e.data;
+    if (m.party === "open") f.classList.toggle("open", !!m.on);
+    else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
+    else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
+    else if (m.party === "member") {
+      $("#quit").hidden = $("#partyBtn").hidden = !m.on;
+      document.body.classList.toggle("inparty", !!m.on);
+      $("#partyBtn").classList.toggle("away", !!m.away);
+    }
+  });
+  const askQuit = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
+  document.querySelector(".logo").addEventListener("click", askQuit);
+  $("#quit").onclick = askQuit;
+  $("#partyBtn").onclick = () => f.contentWindow.postMessage({ party: "open" }, PARTY);
+  $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
+  $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
+  $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });
+}
+</script>
+</body>
+</html>

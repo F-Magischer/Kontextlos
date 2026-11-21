@@ -30,4 +30,18 @@ module.exports = [
     api: process.env.JASAGER_API || process.env.JASAGER_URL || "https://jasager.onrender.com",
     key: process.env.JASAGER_KEY,
   },
+  {
+    id: "gruenderfieber",
+    name: "GRÜNDERFIEBER",
+    tag: "Erfinde Unsinn. Verkauf ihn teuer.",
+    desc: "Drei Zufallskarten, drei Minuten: Erfinde ein absurdes Produkt, zeichne es, gib ihm Namen und Slogan – und pitche es live vor den anderen. Die investieren ihr Spielgeld. Wer am meisten Kapital einsammelt, gewinnt.",
+    players: "3–12",
+    time: "15–30 Min.",
+    tags: ["Party", "Zeichnen", "Pitchen"],
+    art: "/games/gruenderfieber.svg",
+    max: 12,
+    url: process.env.GRUENDERFIEBER_URL || "https://gruenderfieber.furida.workers.dev",
+    api: process.env.GRUENDERFIEBER_API || process.env.GRUENDERFIEBER_URL || "https://gruenderfieber.onrender.com",
+    key: process.env.GRUENDERFIEBER_KEY,
+  },
 ];

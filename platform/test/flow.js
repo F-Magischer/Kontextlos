@@ -20,7 +20,7 @@ assert.deepStrictEqual(tally(["a"], V({ x: "constructor" }), null).winner, null)
 const KEY = "test-key";
 const PP = 18090, GP = 18080;
 const SELF = `http://localhost:${PP}`;
-const env = { ...process.env, PARTY_API: SELF, PARTY_KEY: KEY, PLAY_URL: SELF, KONTEXTLOS_URL: `http://localhost:${GP}`, KONTEXTLOS_KEY: KEY, JASAGER_URL: "http://localhost:9" }; // a second game that is down: never picked here
+const env = { ...process.env, PARTY_API: SELF, PARTY_KEY: KEY, PLAY_URL: SELF, KONTEXTLOS_URL: `http://localhost:${GP}`, KONTEXTLOS_KEY: KEY, JASAGER_URL: "http://localhost:9", GRUENDERFIEBER_URL: "http://localhost:9" }; // other games that are down: never picked here
 const procs = [
   spawn(process.execPath, [path.join(__dirname, "..", "server.js")], { env: { ...env, PORT: PP }, stdio: "inherit" }),
   spawn(process.execPath, [path.join(__dirname, "..", "..", "server", "server.js")], { env: { ...env, PORT: GP }, stdio: "inherit" }),
@@ -69,7 +69,7 @@ async function guest() {
   assert.match((await ben.next((m) => m.t === "note")).msg, /Leader/);
   anna.say({ t: "vote-start" });
   const v = (await ben.next((m) => m.t === "state" && m.party?.vote)).party.vote;
-  assert.deepStrictEqual(v.options, ["kontextlos", "jasager"]);
+  assert.deepStrictEqual(v.options, ["kontextlos", "jasager", "gruenderfieber"]);
   anna.say({ t: "vote", option: "kontextlos" });
   ben.say({ t: "vote", option: "kontextlos" }); // everyone voted: ends early, then hands over
 

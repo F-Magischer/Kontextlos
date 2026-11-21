@@ -37,6 +37,8 @@ services:
         sync: false
       - key: JASAGER_KEY
         sync: false
+      - key: GRUENDERFIEBER_KEY
+        sync: false
 
   # JA-SAGER (jasager/), a second FURIDA game
   - type: web
@@ -55,4 +57,23 @@ services:
       - key: PUBLIC_URL
         value: https://jasager.furida.workers.dev
       - key: PARTY_KEY # same value as JASAGER_KEY on furida-party
+        sync: false
+
+  # GRÜNDERFIEBER (gruenderfieber/), a third FURIDA game
+  - type: web
+    name: gruenderfieber
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd gruenderfieber && npm ci
+    startCommand: cd gruenderfieber && npm start
+    healthCheckPath: /
+    buildFilter:
+      paths: ["gruenderfieber/**"]
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PUBLIC_URL
+        value: https://gruenderfieber.furida.workers.dev
+      - key: PARTY_KEY # same value as GRUENDERFIEBER_KEY on furida-party
         sync: false
