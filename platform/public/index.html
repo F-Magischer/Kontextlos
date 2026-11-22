@@ -78,6 +78,10 @@ label { display: block; margin: 0 0 6px 2px; }
 .stack { display: grid; gap: 12px; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 700; } .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .note { border-radius: 14px; padding: 12px 14px; font-weight: 700; background: color-mix(in srgb, var(--a2) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--a2) 40%, transparent); }
+.wake { display: grid; gap: 8px; }
+.wake .track { height: 10px; border-radius: 99px; background: color-mix(in srgb, var(--a3) 20%, transparent); overflow: hidden; }
+.wake .track i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--a1, var(--a3)), var(--a3)); transition: width .25s linear; }
+.wake .muted { font-size: 13px; font-weight: 600; }
 .note.ok { background: color-mix(in srgb, var(--a3) 18%, var(--surface)); border-color: color-mix(in srgb, var(--a3) 40%, transparent); }
 
 /* hero: featured game on its wallpaper */
@@ -190,7 +194,7 @@ const store = { get(k){ try { return localStorage.getItem(k); } catch { return n
 const COLORS = ["#7C5CFF", "#FF5C8A", "#12C2AE", "#FF7A45", "#22A6EE", "#E04FD8", "#F2B700", "#3DBE6B", "#FF3D57", "#5B6CFF"];
 const HOW = { leader: "Gleichstand – der Leader hat entschieden.", lot: "Gleichstand – per Los entschieden.", "tie-stay": "Gleichstand – ihr bleibt.", none: "Keine Stimmen – ihr bleibt." };
 const inviteCode = (location.pathname.match(/^\/p\/([A-Za-z]{4})$/) || [])[1]?.toUpperCase() || null;
-let st = null, ws, note = "", noteOk = false, openSheet = false, asked = false, autoJoined = false, voteEnds = 0, lastMember = "", screen = "";
+let wakeAt = 0, st = null, ws, note = "", noteOk = false, openSheet = false, asked = false, autoJoined = false, voteEnds = 0, lastMember = "", screen = "";
 
 const fit = () => document.documentElement.style.setProperty("--z", Math.max(1, Math.min(innerWidth / 1440, innerHeight / 900)).toFixed(3));
 fit(); addEventListener("resize", fit);
@@ -221,7 +225,7 @@ function connect() {
   ws = new WebSocket(location.origin.replace(/^http/, "ws"));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.t === "state") { st = m; if (m.party?.vote) voteEnds = Date.now() + m.party.vote.left; afterState(); }
+    if (m.t === "state") { st = m; if (m.party?.vote) voteEnds = Date.now() + m.party.vote.left; if (m.party?.wake != null) wakeAt = Date.now() - m.party.wake * 1000; afterState(); }
     else if (m.t === "note") say(m.msg);
     else if (m.t === "go") navigate(m.url);
     else if (m.t === "code") toParent({ party: "code", code: m.code });
@@ -246,6 +250,8 @@ $("#quitbox").onclick = (e) => { if (e.target.id === "quitbox") $("#quitbox").hi
 function afterState() {
   const pa = st.party;
   if (!OV && inviteCode && st.me.name && !autoJoined && pa?.code !== inviteCode) { autoJoined = true; out({ t: "join", code: inviteCode }); }
+  // our own invite link (a game sent us back here to rejoin): straight into the running game
+  if (!OV && inviteCode && pa?.code === inviteCode && pa.game && !pa.busy && !autoJoined) { autoJoined = true; return navigate(gameOf(pa.game).url); }
   if (OV && pa && playsHere(pa) && !pa.busy && !asked) { asked = true; out({ t: "code" }); }
   if (OV) {
     const mem = JSON.stringify({ party: "member", on: !!pa, away: !!(pa && pa.game && !playsHere(pa)) });
@@ -265,7 +271,7 @@ function hero(pa, lead) {
   const live = pa?.game === g.id;
   let act = "";
   if (!pa) act = `<button id="heroStart">Party erstellen & spielen</button><button class="ghost" id="heroJoin">Party beitreten</button>`;
-  else if (live && !playsHere(pa)) act = `<button id="follow">Zum Spiel</button>`;
+  else if (live) act = playsHere(pa) ? `<button id="close2">Zurück zum Spiel</button>` : `<button id="follow">Zum Spiel</button>`;
   if (pa && lead && !pa.vote && !pa.busy) act += `<button ${live ? 'class="ghost"' : ""} data-pick="${esc(g.id)}">${live ? "Neue Runde starten" : "Mit der Party spielen"}</button>`;
   return `<section class="hero"><img src="${esc(g.art)}" alt="">
     <div class="in"><span class="eyebrow">${live ? "Eure Party spielt gerade" : "Empfohlen"}</span><h1>${esc(g.name)}</h1>
@@ -333,7 +339,8 @@ function render() {
   if (pa) {
     const busy = pa.busy && gameOf(pa.busy);
     if (note) main += `<div class="note ${noteOk ? "ok" : ""}">${esc(note)}</div>`;
-    if (busy) main += `<div class="note ok">Wechsel zu ${esc(busy.name)} … ein schlafender Server braucht bis zu einer Minute.</div>`;
+    if (busy) main += pa.wake == null ? `<div class="note ok">Wechsel zu ${esc(busy.name)} …</div>`
+      : `<div class="note ok wake"><span>${esc(busy.name)} wird hochgefahren …</span><div class="track"><i id="wakebar"></i></div><span class="muted" id="wakeleft"></span></div>`;
     if (pa.last && !pa.vote && !busy) main += `<div class="note ok">Ergebnis: <b>${esc(optName(pa.last.winner || "stay"))}</b>. ${esc(HOW[pa.last.how] || "")}</div>`;
     if (pa.vote) main += votePanel(pa);
   }
@@ -363,6 +370,7 @@ function bind() {
   on("#secs", () => out({ t: "settings", anyone: st.party.anyone, secs: { 20: 30, 30: 60, 60: 20 }[st.party.secs] || 30 }));
   on("#follow", () => navigate(gameOf(st.party.game).url));
   on("#close", () => { note = ""; setOpen(false); });
+  on("#close2", () => { note = ""; setOpen(false); });
   on("#hub", () => navigate(HUB));
   on("#copycode", async () => {
     const c = st.party.code;
@@ -381,6 +389,13 @@ function bind() {
   for (const id of ["name", "code"]) { const el = $("#" + id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") join(); }; }
 }
 
+// a sleeping free server starts in ~30–60 s: fill the bar towards that, then creep on slowly
+setInterval(() => {
+  const bar = $("#wakebar"); if (!bar) return;
+  const t = (Date.now() - wakeAt) / 1000, ETA = 50;
+  bar.style.width = (t < ETA ? t / ETA * 85 : 85 + 13 * (1 - Math.exp(-(t - ETA) / 40))).toFixed(1) + "%";
+  $("#wakeleft").textContent = t < ETA - 3 ? `noch ca. ${Math.ceil(ETA - t)} s` : "gleich geschafft …";
+}, 250);
 setInterval(() => { const el = $("#left"); if (el) el.textContent = Math.max(0, Math.ceil((voteEnds - Date.now()) / 1000)) + " s"; }, 250);
 render();
 start();

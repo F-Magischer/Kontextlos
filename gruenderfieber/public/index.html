@@ -130,7 +130,7 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 
 .quit { width: auto; padding: 6px 8px; line-height: 0; background: var(--s2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; box-shadow: none; }
 .pbtn { width: auto; padding: 5px 10px; font-size: 13px; letter-spacing: .1em; border-radius: 10px; background: linear-gradient(100deg, #7C5CFF, #22D3EE); color: #fff; position: relative; box-shadow: none; }
 .pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--gold); color: var(--bg); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
-body:not(.lobby) .pbtn { display: none; }
+body:not(.lobby):not(.home) .pbtn { display: none; }
 @media (max-width: 460px) { body.inparty .who { display: none; } }
 iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
 iframe.party.open { width: 100%; height: 100%; visibility: visible; }
@@ -152,10 +152,16 @@ iframe.party.open { width: 100%; height: 100%; visibility: visible; }
 <div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p class="muted">Du verlässt die Party und gehst zurück zur Lobby.</p>
 <button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
 <script>
+// the bare Render address is another site: no party, no FURIDA. Always use the public one.
+if (location.hostname.endsWith(".onrender.com")) location.replace("https://gruenderfieber.furida.workers.dev" + location.pathname + location.search + location.hash);
 const $ = (s) => document.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+// FURIDA party overlay: only on the platform domain (local tests: localStorage gf_party = "http://localhost:8090")
+const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("gf_party");
+const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
+  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small><span class="fa-go">Spiele entdecken →</span></a>`;
 const devId = () => { let d = store.get("gf_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("gf_dev", d); } return d; };
 const MODES = {
   zufall: ["Zufall", "Das Spiel teilt die Karten aus: was, für wen, welches Problem. Einmal pro Runde darf man neu ziehen."],
@@ -164,7 +170,6 @@ const MODES = {
 };
 const eur = (k) => (k * 1000).toLocaleString("de-DE") + " €";
 // FURIDA party overlay: only on the platform domain (local tests: localStorage gf_party = "http://localhost:8090")
-const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("gf_party");
 let ws, me = null, joining = false, st = null, shown = "", ends = 0, partyCode = null;
 // the drawing lives outside the DOM, so redraws of the screen never lose it
 let actions = [], tool = "pen", ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, invest = 0;
@@ -191,7 +196,7 @@ function connect(code, name, create = false, party = null) {
 const out = (d) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
 
 function startScreen(err) {
-  shown = ""; st = null; document.body.classList.remove("lobby");
+  shown = ""; st = null; document.body.classList.remove("lobby"); document.body.classList.add("home");
   $("#who").innerHTML = "";
   const code0 = new URLSearchParams(location.search).get("code") || "";
   app.innerHTML = `<div class="start">
@@ -201,7 +206,8 @@ function startScreen(err) {
     <div class="card stack">${err ? `<div class="err">${esc(err)}</div>` : ""}
       <div><label class="label" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("gf_name") || "")}"></div>
       <div><label class="label" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
-      <button id="go">Mitspielen</button><div class="or">oder</div><button id="new" class="ghost">Neuen Raum erstellen</button></div></div>`;
+      <button id="go">Mitspielen</button><div class="or">oder</div><button id="new" class="ghost">Neuen Raum erstellen</button></div></div>
+    ${PARTY ? furidaAd() : ""}`;
   $("#go").onclick = () => {
     const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
     if (!name) return startScreen("Erst deinen Namen eingeben.");
@@ -224,7 +230,7 @@ const productCard = (p) => `<div class="card product"><img src="${esc(p.img)}" a
 function show(d) {
   st = d;
   ends = Date.now() + d.left;
-  document.body.classList.toggle("lobby", d.phase === "lobby");
+  document.body.classList.toggle("lobby", d.phase === "lobby"); document.body.classList.remove("home");
   const you = player(d.you);
   if (you) { document.documentElement.style.setProperty("--me", you.color); $("#who").innerHTML = `<span class="code">${esc(d.party || d.code)}</span><b>${esc(you.name)}</b>`; }
   const p = d.pitch;
@@ -276,7 +282,6 @@ function lobby() {
     app.querySelectorAll("[data-draw]").forEach((b) => b.onclick = () => out({ a: "settings", draw: +b.dataset.draw }));
     app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
   }
-  if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
 }
 
 // ---------------------------------------------------------------- write: the client's brief, or one part of a chain card
@@ -461,7 +466,6 @@ function end() {
     ${d.vip ? `<button id="again">Nochmal spielen</button>` : `<p class="progress">${esc(d.players.find((p) => p.vip)?.name || "Der Boss")} kann eine neue Runde starten.</p>`}
     ${PARTY ? furidaAd() : ""}`;
   if (d.vip) $("#again").onclick = () => out({ a: "restart" });
-  if (PARTY) $("#furidaAd").onclick = (e) => { if (!document.body.classList.contains("inparty")) return; e.preventDefault(); $("#partyBtn").click(); };
 }
 
 // timer; at the end of developing, phones hand in whatever they have
@@ -479,8 +483,6 @@ const q0 = new URLSearchParams(location.search).get("code");
 if (q0 && store.get("gf_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("gf_name") || "");
 
 // ---------------------------------------------------------------- FURIDA party
-const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
-  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small><span class="fa-go">Spiele entdecken →</span></a>`;
 function usePartyCode() {
   if (!partyCode || me || joining) return;
   connect(null, null, false, partyCode);
@@ -499,7 +501,7 @@ if (PARTY) {
     else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
     else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
     else if (m.party === "member") {
-      $("#quit").hidden = $("#partyBtn").hidden = !m.on;
+      $("#quit").hidden = !m.on;
       document.body.classList.toggle("inparty", !!m.on);
       $("#partyBtn").classList.toggle("away", !!m.away);
     }
@@ -507,7 +509,11 @@ if (PARTY) {
   const askQuit = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
   document.querySelector(".logo").addEventListener("click", askQuit);
   $("#quit").onclick = askQuit;
-  $("#partyBtn").onclick = () => f.contentWindow.postMessage({ party: "open" }, PARTY);
+  // FURIDA button and ad: in a party they open the party page on top; otherwise the hub (in a new tab, so a running game stays open)
+  const toHub = (e) => { e.preventDefault(); if (document.body.classList.contains("inparty")) return f.contentWindow.postMessage({ party: "open" }, PARTY); window.open(PARTY + "/", me ? "_blank" : "_top"); };
+  $("#partyBtn").hidden = false;
+  $("#partyBtn").onclick = toHub;
+  document.addEventListener("click", (e) => { if (e.target.closest("#furidaAd")) toHub(e); });
   $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
   $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
   $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });

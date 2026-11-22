@@ -21,7 +21,8 @@ const send = (ws, o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const online = (r) => r.order.filter((id) => r.players.get(id).online);
-const vip = (r) => online(r)[0] || "";
+// boss: the party leader while online, otherwise whoever joined first
+const vip = (r) => online(r).find((id) => r.lead && r.players.get(id).dev === r.lead) || online(r)[0] || "";
 const brief = () => ({ what: pick(P.WHAT), who: pick(P.WHO), problem: pick(P.PROBLEM) });
 
 function createRoom(code, link) {

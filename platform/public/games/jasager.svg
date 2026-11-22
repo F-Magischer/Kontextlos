@@ -16,7 +16,7 @@
     <rect x="0" y="12" width="680" height="200" rx="34" fill="#14213D"/>
     <rect width="680" height="200" rx="34" fill="#FFFFFF" stroke="#14213D" stroke-width="7"/>
     <text x="340" y="88" font-size="30" fill="#5B6478" text-anchor="middle" letter-spacing="4">FRAGE 3 / 8</text>
-    <text x="340" y="150" font-size="50" fill="#14213D" text-anchor="middle">Hältst du dich für schlau?</text>
+    <text x="340" y="150" font-size="40" fill="#14213D" text-anchor="middle">Hältst du dich für schlau?</text>
   </g>
 
   <!-- yes / no -->

@@ -19,7 +19,8 @@ function points(guess, actual, n) {
 
 const send = (ws, o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const online = (r) => r.order.filter((id) => r.players.get(id).online);
-const vip = (r) => online(r)[0] || "";
+// boss: the party leader while online, otherwise whoever joined first
+const vip = (r) => online(r).find((id) => r.lead && r.players.get(id).dev === r.lead) || online(r)[0] || "";
 
 function createRoom(code, link) {
   return { code, link, invite: null, party: null, players: new Map(), order: [], phase: "lobby", rounds: 8, round: 0,

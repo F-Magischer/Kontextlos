@@ -67,6 +67,7 @@ function maybeCleanup(r) {
 const server = http.createServer((req, res) => {
   let p;
   try { p = decodeURIComponent(new URL(req.url, "http://x").pathname); } catch { return res.writeHead(400).end(); }
+  if (p === "/health") return res.writeHead(200, { "Cache-Control": "no-store" }).end("ok"); // the party service waits for this while we wake up
   if (p.startsWith("/party/") && req.method === "POST") {
     if (!partyAuth(req.headers.authorization || "")) return res.writeHead(403).end();
     return readJson(req).then((b) => {
@@ -74,6 +75,7 @@ const server = http.createServer((req, res) => {
         const r = newRoom();
         // party rooms: QR codes and links lead to the party invite, so newcomers join the party first
         if (/^https?:\/\/[^\s"<>]+$/.test(b.invite || "")) { r.invite = b.invite; r.party = String(b.code || "").slice(0, 8); }
+        if (typeof b.leader === "string") r.lead = "party:" + b.leader.slice(0, 40); // the party leader is the boss here too
         maybeCleanup(r);
         return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ room: r.code }));
       }
@@ -135,7 +137,6 @@ wss.on("connection", (ws) => {
     let name = String(p.name || "Gast").slice(0, 12);
     for (let i = 2; nameTaken(r, name); i++) name = String(p.name).slice(0, 11) + i;
     joinAs(r, name, dev);
-    if (p.leader && r.phase === "lobby") { r.order.splice(r.order.indexOf(pid), 1); r.order.unshift(pid); G.push(r); } // party leader runs the room
   };
 
   ws.on("message", (raw) => {

@@ -23,7 +23,8 @@ function createRoom(code, link) {
 
 // ---------------------------------------------------------------- helpers
 const online = (r) => r.order.filter((id) => r.players.get(id).online);
-const vip = (r) => online(r)[0] || "";
+// boss: the party leader while online, otherwise whoever joined first
+const vip = (r) => online(r).find((id) => r.lead && r.players.get(id).dev === r.lead) || online(r)[0] || "";
 const nameOf = (r, id) => r.players.get(id).name;
 const inRound = (r, id) => r.posts.some((p) => p.answerer === id);
 // last round ×3, second-to-last ×2, everything before ×1

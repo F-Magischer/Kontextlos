@@ -1,5 +1,6 @@
 // Personal yes/no questions. Everyone answers for themselves, then guesses how many said yes.
-// Kept harmless enough for mixed groups (kids included), personal enough to be interesting.
+// Kept harmless on paper for mixed groups, personal enough to be interesting. Some ask you to rate yourself
+// against the group, some have a double meaning the room supplies itself.
 module.exports = [
   "Hältst du dich für schlau?",
   "Hast du heute schon gelogen?",
@@ -71,4 +72,40 @@ module.exports = [
   "Bist du ein Fan von Überraschungspartys?",
   "Hast du schon mal einen Brief mit der Hand geschrieben – dieses Jahr?",
   "Glaubst du, dass Katzen klüger sind als Hunde?",
+  // you against the group: rate yourself, then guess how many others rate themselves just as high
+  "Bist du der beste Zocker in dieser Runde?",
+  "Bist du die sportlichste Person hier?",
+  "Würdest du hier in der Runde jedes Wettrennen gewinnen?",
+  "Bist du der lustigste Mensch in dieser Runde?",
+  "Bist du hier die Person mit dem besten Musikgeschmack?",
+  "Würdest du in einem Quiz alle hier schlagen?",
+  "Bist du von allen hier am besten angezogen?",
+  "Könntest du hier jeden im Armdrücken besiegen?",
+  "Bist du die beste Köchin oder der beste Koch in dieser Runde?",
+  "Würdest du von allen hier am längsten auf einer einsamen Insel überleben?",
+  "Bist du hier die Person, die am meisten zu spät kommt?",
+  "Wärst du der beste Lügner in dieser Runde?",
+  "Bist du hier am schlechtesten im Verlieren?",
+  "Hast du das meiste Glück von allen hier?",
+  "Bist du die Person hier, die am meisten auf dem Handy hängt?",
+  "Würdest du hier im Tanzen gewinnen?",
+  "Bist du am mutigsten von allen hier?",
+  "Hast du in dieser Runde die beste Ausrede für alles?",
+  "Würde dich hier jeder als Erstes anrufen, wenn es ein Problem gibt?",
+  "Bist du die Person, die dieses Spiel gewinnen wird?",
+  "Wärst du in einem Horrorfilm die Person aus dieser Runde, die bis zum Schluss überlebt?",
+  "Bist du hier die Person mit den meisten Geheimnissen?",
+  // double meanings: harmless on paper, the grins come from the room
+  "Hast du heute schon was Großes erledigt?",
+  "Machst du es lieber morgens als abends?",
+  "Bist du gut mit den Händen?",
+  "Kommst du meistens zu früh?",
+  "Brauchst du es jeden Tag?",
+  "Hast du es schon mal im Auto gemacht?",
+  "Bist du beim ersten Mal nervös gewesen?",
+  "Magst du es lieber hart? (Gemeint sind Eier.)",
+  "Hast du heute schon mit dem Feuer gespielt?",
+  "Lässt du andere gern mal ran?",
+  "Bist du eher ausdauernd als schnell?",
+  "Würdest du sagen, die Größe spielt keine Rolle?",
 ];

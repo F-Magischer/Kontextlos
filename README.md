@@ -12,7 +12,7 @@ server/   Node – Spiellogik (game.js), Räume, Texte (content.js), Handy-Seite
 platform/ Node – FURIDA-Party-Service + Hub (play.furida.workers.dev): Gast-Identität, Partys, Spielwahl, Übergabe an Spiele
 jasager/  Node – JA-SAGER, zweites FURIDA-Spiel (jasager.furida.workers.dev): Ja/Nein-Fragen, schätzen wie viele Ja sagen. Test: cd jasager; npm test
 gruenderfieber/ Node – GRÜNDERFIEBER, drittes FURIDA-Spiel (gruenderfieber.furida.workers.dev): Produkt erfinden, zeichnen, pitchen, Spielgeld einsammeln. Test: cd gruenderfieber; npm test
-cloudflare/ Worker, der eine Render-App unter *.furida.workers.dev durchreicht
+cloudflare/ Worker, der eine Render-App unter *.furida.workers.dev durchreicht (mit eigenem Ladebildschirm, solange der Server aufwacht)
 ```
 
 **Party-System:** Konzept in [docs/party-system-konzept.md](docs/party-system-konzept.md). Test: `cd platform; npm test`.

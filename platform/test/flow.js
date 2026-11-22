@@ -132,6 +132,11 @@ async function guest() {
   const bad = await fetch(SELF + "/api/redeem", { method: "POST", headers: { authorization: "Bearer nope" }, body: JSON.stringify({ code: "x" }) });
   assert.strictEqual(bad.status, 403);
 
+  // a game server that does not answer yet: the party waits for it (progress), instead of giving up
+  anna.say({ t: "pick", game: "jasager" });
+  const w = await anna.next((m) => m.t === "state" && m.party?.wake != null);
+  assert.strictEqual(w.party.busy, "jasager");
+
   console.log("OK: party flow");
   done(0);
 })().catch((e) => { console.error("FAIL:", e); done(1); });

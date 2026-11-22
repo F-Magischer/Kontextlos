@@ -16,7 +16,7 @@ const SECURE = SELF.startsWith("https:");
 const COOKIE = SECURE ? "__Host-fid" : "fid"; // __Host- needs https; it stops other subdomains from planting the cookie
 const PUBLIC = path.join(__dirname, "public");
 const SEC = 1000, MIN = 60 * SEC;
-const T = { code: MIN, voterGrace: 15 * SEC, leaderGrace: MIN, memberGone: 10 * MIN, playerGone: 24 * 60 * MIN, prepare: MIN, down: 5 * MIN, cooldown: MIN };
+const T = { code: MIN, voterGrace: 15 * SEC, leaderGrace: MIN, memberGone: 10 * MIN, playerGone: 24 * 60 * MIN, prepare: MIN, down: 5 * MIN, cooldown: MIN, wake: 3 * MIN, poll: 3 * SEC };
 const MAX_MEMBERS = 20;
 const VOTE_SECS = [20, 30, 60];
 const LETTERS = "BCDFGHJKLMNPQRSTVWXZ"; // no vowels: no accidental words
@@ -43,6 +43,9 @@ const clean = (v) => String(v ?? "").replace(/[\u0000-\u001f\u007f-\u009f]/g, ""
 const game = (id) => GAMES.find((g) => g.id === id);
 const send = (ws, o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const online = (p) => p.sockets.size > 0;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// a game server answers its /health with "ok" once it is awake (free hosts sleep and take ~30–60 s to start)
+const up = (g) => fetch(g.api + "/health", { signal: AbortSignal.timeout(5 * SEC) }).then(async (r) => r.ok && (await r.text()).trim() === "ok").catch(() => false);
 
 // ---------------------------------------------------------------- identity
 function secretOf(req) {
@@ -70,6 +73,7 @@ function view(pl) {
     games: GAMES.map((g) => ({ id: g.id, name: g.name, tag: g.tag, desc: g.desc, players: g.players, time: g.time, tags: g.tags, art: g.art, url: g.url, max: g.max, down: (down.get(g.id) || 0) > now })),
     party: pa && {
       code: pa.code, leader: pa.leader, anyone: pa.anyone, secs: pa.secs, busy: pa.busy, last: pa.last,
+      wake: pa.wake ? Math.round((now - pa.wake) / SEC) : null, // seconds the game server has been starting up
       game: pa.game && pa.game.id,
       members: pa.members.map((id) => { const m = players.get(id); return { id, name: m.name, online: online(m) }; }),
       vote: pa.vote && { options: pa.vote.options, counts: tally(pa.vote.options, pa.vote.votes).counts, mine: pa.vote.votes.get(pl.id) || null, left: Math.max(0, pa.vote.ends - now) },
@@ -85,7 +89,7 @@ const taken = (pa, name, self) => pa.members.some((id) => id !== self && players
 function newParty(leader) {
   let code;
   do code = Array.from({ length: 4 }, () => LETTERS[crypto.randomInt(LETTERS.length)]).join(""); while (parties.has(code));
-  const pa = { code, leader: leader.id, members: [leader.id], game: null, vote: null, busy: null, last: null, anyone: false, secs: 30, cool: 0, banned: new Set() };
+  const pa = { code, leader: leader.id, members: [leader.id], game: null, vote: null, busy: null, wake: null, last: null, anyone: false, secs: 30, cool: 0, banned: new Set() };
   parties.set(code, pa);
   leader.party = code;
   return pa;
@@ -115,7 +119,7 @@ function startVote(pa, pl, ws) {
   pa.vote = { options, votes: new Map(), ends: now + pa.secs * SEC, timer: setTimeout(() => endVote(pa), pa.secs * SEC) };
   pa.last = null;
   // wake sleeping free-tier game servers while people vote
-  for (const g of GAMES) fetch(g.api + "/", { signal: AbortSignal.timeout(T.prepare) }).catch(() => {});
+  for (const g of GAMES) up(g);
   broadcast(pa);
 }
 
@@ -145,10 +149,17 @@ async function transition(pa, id) {
   const g = game(id);
   pa.busy = id;
   broadcast(pa);
+  // a sleeping server: wake it and let everyone watch it start (progress bar) instead of giving up
+  if (!(await up(g))) {
+    pa.wake = Date.now();
+    broadcast(pa);
+    while (parties.has(pa.code) && Date.now() - pa.wake < T.wake && !(await up(g))) await wait(T.poll);
+    pa.wake = null;
+  }
   let room = null;
   try {
     const r = await fetch(g.api + "/party/prepare", {
-      method: "POST", headers: { authorization: "Bearer " + g.key, "content-type": "application/json" }, body: JSON.stringify({ code: pa.code, invite: `${SELF}/p/${pa.code}` }), signal: AbortSignal.timeout(T.prepare),
+      method: "POST", headers: { authorization: "Bearer " + g.key, "content-type": "application/json" }, body: JSON.stringify({ code: pa.code, invite: `${SELF}/p/${pa.code}`, leader: pa.leader }), signal: AbortSignal.timeout(T.prepare),
     });
     room = r.ok ? String((await r.json()).room || "") : "";
     if (!room) throw new Error("prepare answered " + r.status);
@@ -158,7 +169,7 @@ async function transition(pa, id) {
     pa.busy = null;
     if (!parties.has(pa.code)) return;
     broadcast(pa);
-    return tell(pa, `${g.name} ist gerade nicht erreichbar. Ihr bleibt, wo ihr seid.`);
+    return tell(pa, `${g.name} ließ sich gerade nicht starten. Ihr bleibt, wo ihr seid – versucht es gleich nochmal.`);
   }
   pa.busy = null;
   if (!parties.has(pa.code)) return;
@@ -189,7 +200,7 @@ function onMsg(pl, ws, m) {
       const t = parties.get(String(m.code || "").toUpperCase().trim());
       if (!pl.name) return;
       if (!t) return send(ws, { t: "note", msg: "Party nicht gefunden." });
-      if (t === pa) return push(pl);
+      if (t === pa) { push(pl); if (t.game && !t.busy) go(pl, t.game.id); return; } // own invite link: back into the running game
       if (t.banned.has(pl.id)) return send(ws, { t: "note", msg: "Du wurdest aus dieser Party entfernt." });
       if (t.members.length >= MAX_MEMBERS) return send(ws, { t: "note", msg: "Die Party ist voll." });
       if (taken(t, pl.name, pl.id)) return send(ws, { t: "note", msg: "Den Namen gibt es in der Party schon – ändere ihn." });
