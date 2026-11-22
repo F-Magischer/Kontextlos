@@ -18,6 +18,10 @@ services:
         value: https://kontextlos.furida.workers.dev
       - key: PARTY_KEY # same value as KONTEXTLOS_KEY on furida-party
         sync: false
+      - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
+        sync: false
+      - key: DATA_PASSWORD # for /data
+        sync: false
 
   # FURIDA party service + hub (platform/)
   - type: web
@@ -39,6 +43,10 @@ services:
         sync: false
       - key: GRUENDERFIEBER_KEY
         sync: false
+      - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
+        sync: false
+      - key: DATA_PASSWORD # for /data
+        sync: false
 
   # JA-SAGER (jasager/), a second FURIDA game
   - type: web
@@ -58,6 +66,8 @@ services:
         value: https://jasager.furida.workers.dev
       - key: PARTY_KEY # same value as JASAGER_KEY on furida-party
         sync: false
+      - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
+        sync: false
 
   # GRÜNDERFIEBER (gruenderfieber/), a third FURIDA game
   - type: web
@@ -76,4 +86,6 @@ services:
       - key: PUBLIC_URL
         value: https://gruenderfieber.furida.workers.dev
       - key: PARTY_KEY # same value as GRUENDERFIEBER_KEY on furida-party
+        sync: false
+      - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
         sync: false

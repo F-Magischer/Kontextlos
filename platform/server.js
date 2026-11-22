@@ -9,6 +9,7 @@ const { WebSocketServer } = require("ws");
 const QRCode = require("qrcode");
 const GAMES = require("./games");
 const { tally } = require("./vote");
+const S = require("./stats");
 
 const PORT = Number(process.env.PORT) || 8090;
 const SELF = (process.env.PLAY_URL || "https://play.furida.workers.dev").replace(/\/$/, "");
@@ -37,6 +38,7 @@ const codes = new Map(); // hand-over code -> { player, game, room, exp }
 const down = new Map(); // game id -> unavailable until
 
 const hash = (s) => crypto.createHash("sha256").update(s).digest();
+const devOf = (pl) => pl.hash.slice(0, 16);
 const rnd = (n) => crypto.randomBytes(n).toString("hex");
 const safeEq = (a, b) => crypto.timingSafeEqual(hash(String(a)), hash(String(b)));
 const clean = (v) => String(v ?? "").replace(/[\u0000-\u001f\u007f-\u009f]/g, "").replace(/\s+/g, " ").trim().slice(0, 12);
@@ -91,6 +93,7 @@ function newParty(leader) {
   do code = Array.from({ length: 4 }, () => LETTERS[crypto.randomInt(LETTERS.length)]).join(""); while (parties.has(code));
   const pa = { code, leader: leader.id, members: [leader.id], game: null, vote: null, busy: null, wake: null, last: null, anyone: false, secs: 30, cool: 0, banned: new Set() };
   parties.set(code, pa);
+  S.log("party_create", code, devOf(leader));
   leader.party = code;
   return pa;
 }
@@ -140,18 +143,20 @@ function endVote(pa) {
   pa.vote = null;
   const r = tally(v.options, v.votes, v.votes.get(pa.leader));
   pa.last = { winner: r.winner, how: r.how };
+  S.log("vote", pa.code, null, { options: v.options, counts: r.counts, winner: r.winner, how: r.how, members: pa.members.length });
   if (!r.winner || r.winner === "stay") { pa.cool = Date.now() + T.cooldown; return broadcast(pa); }
-  transition(pa, r.winner);
+  transition(pa, r.winner, true);
 }
 
 // ---------------------------------------------------------------- hand-over to a game
-async function transition(pa, id) {
+async function transition(pa, id, byVote = false) {
   const g = game(id);
   pa.busy = id;
   broadcast(pa);
   // a sleeping server: wake it and let everyone watch it start (progress bar) instead of giving up
+  let started = null; // the server was asleep: when we started waking it
   if (!(await up(g))) {
-    pa.wake = Date.now();
+    pa.wake = started = Date.now();
     broadcast(pa);
     while (parties.has(pa.code) && Date.now() - pa.wake < T.wake && !(await up(g))) await wait(T.poll);
     pa.wake = null;
@@ -174,6 +179,7 @@ async function transition(pa, id) {
   pa.busy = null;
   if (!parties.has(pa.code)) return;
   pa.game = { id, room };
+  S.log("play", pa.code, null, { game: id, members: pa.members.length, vote: byVote, woke: !!started });
   broadcast(pa);
   pa.members.forEach((m) => go(players.get(m), id));
 }
@@ -207,6 +213,7 @@ function onMsg(pl, ws, m) {
       if (pa) removeMember(pa, pl);
       t.members.push(pl.id);
       pl.party = t.code;
+      S.log("party_join", t.code, devOf(pl), { members: t.members.length, playing: t.game?.id || null });
       broadcast(t);
       if (t.game && !t.busy) go(pl, t.game.id); // the party already plays: follow it
       return;
@@ -274,6 +281,13 @@ setInterval(() => {
   for (const p of [...players.values()]) if (!p.party && !online(p) && now - p.offlineAt > T.playerGone) { players.delete(p.id); bySecret.delete(p.hash); }
 }, 5 * SEC).unref();
 
+// people on the site right now (open sockets) and parties with someone online
+function live() {
+  const on = [...players.values()].filter(online);
+  return { players: on.length, parties: [...parties.values()].filter((pa) => pa.members.some((id) => online(players.get(id)))).length };
+}
+setInterval(() => { const l = live(); if (l.players) S.log("ccu", null, null, l); }, MIN).unref();
+
 // ---------------------------------------------------------------- http
 const json = (res, code, o, head = {}) => res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store", ...head }).end(JSON.stringify(o));
 
@@ -320,6 +334,7 @@ const server = http.createServer((req, res) => {
       .then((png) => res.writeHead(200, { ...HEAD, "Content-Type": "image/png" }).end(png))
       .catch(() => res.writeHead(500).end());
   }
+  if (p === "/data") return S.page(req, res, live(), GAMES).catch((e) => { console.error(e); res.writeHead(500).end("Fehler: " + e.message); });
   if (p === "/api/redeem" && req.method === "POST") return redeem(req, res).catch((e) => { console.error(e); json(res, 500, {}); });
   const f = p === "/" || p === "/overlay" || /^\/p\/[A-Za-z]{4}$/.test(p) ? "index.html" : p.slice(1);
   const file = path.normalize(path.join(PUBLIC, f));
@@ -337,6 +352,8 @@ wss.on("connection", (ws, req) => {
   if (req.headers.origin !== SELF || !s) return ws.close(4001, "auth");
   const pl = playerFor(s);
   pl.sockets.add(ws);
+  const today = new Date().toISOString().slice(0, 10);
+  if (pl.seen !== today) { pl.seen = today; S.log("visit", null, devOf(pl)); } // once a day per device
   ws.on("message", (raw) => {
     let m;
     try { m = JSON.parse(raw); } catch { return; }

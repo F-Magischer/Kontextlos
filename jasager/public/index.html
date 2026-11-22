@@ -92,6 +92,7 @@ input#code { letter-spacing: .3em; text-transform: uppercase; }
 .mine .y { background: var(--yes); color: #fff; } .mine .n { background: var(--no); color: #fff; }
 .done span { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 14px; background: var(--card); border: 2px solid var(--line); color: var(--soft); }
 .done span.ok { border-color: var(--yes); color: var(--ink); } .done span.ok::before { content: "✓ "; color: var(--yes); }
+.play { display: grid; gap: 16px; } .play > .stack { gap: 16px; }
 
 /* reveal: yes players | counts | no players */
 .reveal { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-template-areas: "mid mid" "yes no"; align-items: start; }
@@ -129,6 +130,18 @@ input#code { letter-spacing: .3em; text-transform: uppercase; }
 .pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--sun); color: var(--ink); border: 2px solid var(--ink); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
 body:not(.lobby):not(.home) .pbtn { display: none; }
 @media (max-width: 460px) { body.inparty .who { display: none; } }
+/* phone held sideways (or any flat screen): question left, answer right, everything on one screen */
+@media (orientation: landscape) and (max-height: 560px) {
+  .wrap { padding-top: max(8px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); padding-bottom: 16px; }
+  header { padding-bottom: 8px; } main { gap: 10px; }
+  .play { grid-template-columns: 1fr 1fr; align-items: center; gap: 18px; } .play > .stack { gap: 10px; }
+  .qcard { padding: 18px 14px; } .qcard h1 { font-size: clamp(24px, 4.2vw, 40px); }
+  .yn button { font-size: 24px; padding: 10px; }
+  .guess { grid-template-columns: 1fr; gap: 8px; } .track { height: 60px; } .track span { font-size: 36px; } .lens { top: 4px; bottom: 4px; }
+  #lock { font-size: 19px; padding: 10px; } .of { margin-top: 2px; }
+  .start { grid-template-columns: 1.1fr 1fr; column-gap: 32px; } .start h1 { font-size: clamp(30px, 6vw, 48px); }
+  .reveal { grid-template-columns: 1fr 160px 1fr; grid-template-areas: "yes mid no"; } .mid { grid-template-columns: 1fr; } .cnt b { font-size: 40px; }
+}
 iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
 iframe.party.open { width: 100%; height: 100%; visibility: visible; }
 .furida-ad { display: grid; gap: 4px; padding: 18px 20px; border-radius: 20px; color: #EEF0FF; text-decoration: none;
@@ -253,7 +266,7 @@ const doneList = () => `<div class="done">${st.players.filter((p) => p.online ||
 
 function ask() {
   const d = st;
-  let h = head() + `<div class="card qcard"><h1>${esc(d.q)}</h1></div>`;
+  let h = head() + `<div class="play"><div class="card qcard"><h1>${esc(d.q)}</h1></div><div class="stack">`;
   if (!d.playing) h += `<div class="card waitbox"><h2>Gleich bist du dabei.</h2><p>Ab der nächsten Frage spielst du mit.</p>${doneList()}</div>`;
   else if (d.mine) h += `<div class="card waitbox"><span class="label">Eingeloggt</span><div class="mine"><span class="${d.mine.answer ? "y" : "n"}">${d.mine.answer ? "Ja" : "Nein"}</span><span>Tipp: ${d.mine.guess} × Ja</span></div>
       <p>Warte auf die anderen …</p><div id="done">${doneList()}</div></div>`;
@@ -265,7 +278,7 @@ function ask() {
         <div class="of">von ${d.n} Spieler${d.n === 1 ? "" : "n"}</div></div>
         <button id="lock" disabled>Antwort einloggen</button></div><div id="done">${doneList()}</div>`;
   }
-  app.innerHTML = h;
+  app.innerHTML = h + `</div></div>`;
   if (!d.playing || d.mine) return;
   app.querySelectorAll("[data-ans]").forEach((b) => b.onclick = () => {
     myAns = b.dataset.ans === "1";

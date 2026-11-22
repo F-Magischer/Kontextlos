@@ -35,7 +35,7 @@ module.exports = [
     name: "GRÜNDERFIEBER",
     tag: "Erfinde Unsinn. Verkauf ihn teuer.",
     desc: "Drei Zufallskarten, drei Minuten: Erfinde ein absurdes Produkt, zeichne es, gib ihm Namen und Slogan – und pitche es live vor den anderen. Die investieren ihr Spielgeld. Wer am meisten Kapital einsammelt, gewinnt.",
-    players: "3–12",
+    players: "2–12",
     time: "15–30 Min.",
     tags: ["Party", "Zeichnen", "Pitchen"],
     art: "/games/gruenderfieber.svg",

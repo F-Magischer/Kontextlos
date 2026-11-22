@@ -120,6 +120,26 @@ function bot() {
   const kd = (await k.next((m) => m.t === "state" && m.d.phase === "develop")).d;
   assert.ok(kd.setter && !kd.playing && kd.budget === 100, "the client only invests");
 
+  // ---- two players are enough: each invests in the other
+  const [u, v] = [await bot(), await bot()];
+  u.say({ t: "create", name: "Uli", dev: "u" });
+  const code4 = (await u.next((m) => m.t === "joined")).code;
+  v.say({ t: "join", code: code4, name: "Vic", dev: "v" });
+  await u.next((m) => m.t === "state" && m.d.players.length === 2);
+  u.act({ a: "rounds", value: 1 });
+  u.act({ a: "settings", draw: 360 });
+  u.act({ a: "start" });
+  assert.strictEqual((await u.next((m) => m.t === "state" && m.d.phase === "develop")).d.total, 360);
+  u.act({ a: "submit", name: "A", slogan: "", img: png() });
+  v.act({ a: "submit", name: "B", slogan: "", img: png() });
+  for (let i = 0; i < 2; i++) { const p2 = (await u.next((m) => m.t === "state" && m.d.phase === "pitch")).d; u.act({ a: "done" }); }
+  const iu = (await u.next((m) => m.t === "state" && m.d.phase === "invest")).d;
+  const vid = iu.players.find((p) => p.name === "Vic").id, uid = iu.you;
+  u.act({ a: "invest", alloc: { [vid]: 70 } });
+  v.act({ a: "invest", alloc: { [uid]: 20 } });
+  const e2 = (await u.next((m) => m.t === "state" && m.d.phase === "end")).d;
+  assert.deepStrictEqual(e2.players.map((p) => p.money), [20, 70]);
+
   // ---- Problem: everyone writes only a problem, the next player invents the rest
   const p = [await bot(), await bot(), await bot()];
   p[0].say({ t: "create", name: "Pia", dev: "p0" });

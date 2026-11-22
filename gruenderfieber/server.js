@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const QRCode = require("qrcode");
 const G = require("./game");
+const S = require("./stats");
 
 const PORT = Number(process.env.PORT) || 8060;
 const MAX_IMG = 400 * 1024; // one product drawing, PNG
@@ -113,6 +114,13 @@ const server = http.createServer((req, res) => {
 const send = (ws, o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const rid = () => crypto.randomBytes(5).toString("hex");
 const nameTaken = (r, n) => [...r.players.values()].some((q) => q.name.toLowerCase() === n.toLowerCase());
+
+// players online right now, once a minute (for the "online" and peak numbers)
+setInterval(() => {
+  let players = 0, n = 0;
+  for (const r of rooms.values()) { const k = [...r.players.values()].filter((p) => p.online).length; if (k) { n++; players += k; } }
+  if (players) S.log("ccu", null, null, { players, rooms: n });
+}, 60 * 1000).unref();
 
 const wss = new WebSocketServer({ server, maxPayload: Math.ceil(MAX_IMG * 1.4) + 4096 });
 wss.on("connection", (ws) => {

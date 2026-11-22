@@ -1,6 +1,7 @@
 // JA-SAGER rules. Everyone sees the same question, answers yes/no for themselves and guesses how many
 // of the round's players say yes (0 … all). Exact guess: 3 points, close: 1 point (closeness grows with the group).
 const QUESTIONS = require("./questions");
+const S = require("./stats");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
 const MIN_PLAYERS = 2, MAX_PLAYERS = 20;
@@ -44,6 +45,7 @@ const push = (r) => r.order.forEach((id) => send(r.players.get(id).ws, { t: "sta
 function addPlayer(r, id, name, ws, dev) {
   r.players.set(id, { name, ws, dev, color: COLORS[r.order.length % COLORS.length], score: 0, online: true });
   r.order.push(id);
+  S.log("join", r.code, dev, { name, phase: r.phase });
   push(r);
 }
 function rejoin(r, id, ws) { const p = r.players.get(id); p.ws = ws; p.online = true; push(r); }
@@ -98,6 +100,9 @@ function reveal(r) {
     gains[id] = { gain, guess: a ? a.guess : null };
   }
   r.result = { yes, no, none: r.inRound.filter((id) => !r.answers.has(id)), gains };
+  const guesses = [...r.answers.values()].map((a) => Math.abs(a.guess - yes.length));
+  S.log("question", r.code, null, { q: r.q, round: r.round, players: n, answered: r.answers.size, yes: yes.length,
+    exact: guesses.filter((d) => d === 0).length, err: guesses.length ? guesses.reduce((s, d) => s + d, 0) / guesses.length : null });
   r.phase = "reveal";
   r.deadline = Date.now() + (T.reveal * 1000) / SPEED;
   later(r, T.reveal, () => next(r));
@@ -106,7 +111,11 @@ function reveal(r) {
 
 function next(r) {
   if (r.phase !== "reveal") return;
-  if (r.round >= r.rounds || online(r).length < MIN_PLAYERS) { r.phase = "end"; r.deadline = 0; clearTimeout(r.timer); return push(r); }
+  if (r.round >= r.rounds || online(r).length < MIN_PLAYERS) {
+    r.phase = "end"; r.deadline = 0; clearTimeout(r.timer);
+    S.log("game_end", r.code, null, { players: online(r).length, rounds: r.round, planned: r.rounds });
+    return push(r);
+  }
   startRound(r);
 }
 
@@ -116,6 +125,7 @@ function onPlayer(r, id, d) {
   if (d.a === "start" && boss && r.phase === "lobby" && online(r).length >= MIN_PLAYERS) {
     r.round = 0; r.used.clear();
     r.order.forEach((pid) => { r.players.get(pid).score = 0; });
+    S.log("game_start", r.code, null, { players: online(r).length, rounds: r.rounds, party: !!r.party });
     startRound(r);
   } else if (d.a === "rounds" && boss && r.phase === "lobby" && ROUND_CHOICES.includes(d.value)) {
     r.rounds = d.value; push(r);

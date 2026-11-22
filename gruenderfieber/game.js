@@ -6,15 +6,16 @@
 // brief for all others, "kette" every card passes through three players who each add one part, seeing the earlier ones,
 // "problem" everyone writes only a problem, the next player invents whatever solves it.
 const P = require("./prompts");
+const S = require("./stats");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
-const MIN_PLAYERS = 3, MAX_PLAYERS = 12; // at least two investors per pitch; every pitch takes a minute
+const MIN_PLAYERS = 2, MAX_PLAYERS = 12; // two: each invests in the other; every pitch takes up to a minute and a half
 const ROUND_CHOICES = [1, 2, 3];
 const BUDGET = 100; // thousand euros per investor and round
 const STEP = 5;
 const T = { grace: 3, auftrag: 75, kette: 45, problem: 45, invest: 60, results: 25 }; // seconds
 const MODES = ["zufall", "auftrag", "kette", "problem"];
-const DRAW_CHOICES = [120, 180, 240];
+const DRAW_CHOICES = [120, 180, 240, 300, 360];
 const PITCH_CHOICES = [30, 60, 90];
 const FIELDS = ["what", "who", "problem"];
 const STEPS = { kette: FIELDS, problem: ["problem"] }; // ring modes: one field per pass
@@ -89,6 +90,7 @@ function later(r, sec, f) { clearTimeout(r.timer); r.timer = setTimeout(f, (sec 
 function addPlayer(r, id, name, ws, dev) {
   r.players.set(id, { name, ws, dev, color: COLORS[r.order.length % COLORS.length], money: 0, online: true });
   r.order.push(id);
+  S.log("join", r.code, dev, { name, phase: r.phase });
   push(r);
 }
 function rejoin(r, id, ws) { const p = r.players.get(id); p.ws = ws; p.online = true; push(r); }
@@ -184,6 +186,9 @@ function showResults(r) {
     return { ...card(r, id), raised, investors: got.map(([inv, amount]) => ({ name: r.players.get(inv).name, amount })) };
   }).sort((a, b) => b.raised - a.raised);
   r.results = { list };
+  list.forEach((x) => S.log("idea", r.code, r.players.get(x.id).dev, { round: r.round, mode: r.play.mode, players: r.queue.length,
+    product: x.product, slogan: x.slogan, brief: { what: x.brief.what, who: x.brief.who, problem: x.brief.problem }, raised: x.raised, investors: x.investors.length }));
+  if (r.round >= r.cfg.rounds) S.log("game_end", r.code, null, { players: online(r).length, rounds: r.round });
   r.phase = r.round >= r.cfg.rounds ? "end" : "results";
   r.stage = "";
   if (r.phase === "results") later(r, T.results, () => { if (r.phase === "results") startRound(r); });
@@ -213,6 +218,7 @@ function onPlayer(r, id, d) {
   if (d.a === "start" && boss && r.phase === "lobby" && online(r).length >= MIN_PLAYERS) {
     r.round = 0;
     r.order.forEach((p) => { r.players.get(p).money = 0; });
+    S.log("game_start", r.code, null, { players: online(r).length, party: !!r.party, ...r.cfg });
     startRound(r);
   } else if (d.a === "rounds" && boss && ROUND_CHOICES.includes(d.value)) {
     r.cfg.rounds = d.value; push(r);
