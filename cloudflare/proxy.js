@@ -1,6 +1,8 @@
 // Cloudflare Worker: serves a Render app under <name>.furida.workers.dev, so all party sites are same-site.
 // Passes every request through unchanged, WebSocket upgrades included. Set the variable TARGET, e.g. kontextlos.onrender.com
-// While the free Render server sleeps, pages get our own loading screen (instead of Render's) that reloads once it is up.
+// While the free Render server sleeps, pages get our own loading screen (instead of Render's 502) that reloads once it is up.
+// Render does not wake a sleeping service for requests that come from a Worker (it answers 502 at once), so the loading
+// page's browser pings the onrender address directly; that wakes it.
 const NAMES = { kontextlos: "KONTEXTLOS", jasager: "JA-SAGER", gruenderfieber: "GRÜNDERFIEBER", play: "FURIDA" };
 let awakeUntil = 0; // per worker instance: after a good answer, skip the check for a minute
 
@@ -12,7 +14,7 @@ export default {
     if (url.pathname === "/__wake") return Response.json({ up: await up(env.TARGET) }, { headers: { "cache-control": "no-store" } });
     const page = req.method === "GET" && !req.headers.get("upgrade") && (req.headers.get("sec-fetch-mode") === "navigate" || (req.headers.get("accept") || "").includes("text/html"));
     if (page && Date.now() > awakeUntil && !(await up(env.TARGET)))
-      return new Response(loading(name), { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "retry-after": "5" } });
+      return new Response(loading(name, env.TARGET), { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "retry-after": "5" } });
     return fetch(new Request(url, req));
   },
 };
@@ -27,7 +29,7 @@ async function up(host) {
   } catch { return false; }
 }
 
-const loading = (name) => `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+const loading = (name, host) => `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${name} startet …</title><meta name="theme-color" content="#0E0F1A">
 <style>
 * { box-sizing: border-box; margin: 0; }
@@ -47,6 +49,8 @@ p { opacity: .75; font-size: 15px; } #left { font-variant-numeric: tabular-nums;
 <p>Der Server hat geschlafen, weil eine Weile niemand gespielt hat. Die Seite lädt von selbst neu, sobald er bereit ist.</p>
 </main><script>
 const t0 = Date.now(), ETA = 50;
+const wake = () => fetch("https://${host}/health", { mode: "no-cors", cache: "no-store" }).catch(() => {});
+wake(); setInterval(wake, 10000);
 setInterval(() => {
   const t = (Date.now() - t0) / 1000;
   document.getElementById("bar").style.width = (t < ETA ? 2 + t / ETA * 83 : 85 + 13 * (1 - Math.exp(-(t - ETA) / 40))).toFixed(1) + "%";

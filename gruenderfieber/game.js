@@ -1,6 +1,7 @@
 // GRÜNDERFIEBER rules. Each round: everyone draws a brief (what · for whom · which problem), invents and draws a product
-// with name and slogan, then pitches it while the others listen; after each pitch the others invest from their
-// round budget. Whoever raises the most capital over all rounds wins.
+// with name and slogan, then pitches it while the others listen. After all pitches everyone shares their round budget
+// among the other products. Whoever raises the most capital over all rounds wins.
+// The boss may change the settings at any time; a running round keeps the ones it started with.
 // Modes: "zufall" the game deals the cards (optionally the same for everyone), "auftrag" one player per round writes the
 // brief for all others, "kette" every card passes through three players who each add one part, seeing the earlier ones,
 // "problem" everyone writes only a problem, the next player invents whatever solves it.
@@ -11,9 +12,10 @@ const MIN_PLAYERS = 3, MAX_PLAYERS = 12; // at least two investors per pitch; ev
 const ROUND_CHOICES = [1, 2, 3];
 const BUDGET = 100; // thousand euros per investor and round
 const STEP = 5;
-const T = { grace: 3, auftrag: 75, kette: 45, problem: 45, talk: 60, invest: 25, results: 25 }; // seconds
+const T = { grace: 3, auftrag: 75, kette: 45, problem: 45, invest: 60, results: 25 }; // seconds
 const MODES = ["zufall", "auftrag", "kette", "problem"];
 const DRAW_CHOICES = [120, 180, 240];
+const PITCH_CHOICES = [30, 60, 90];
 const FIELDS = ["what", "who", "problem"];
 const STEPS = { kette: FIELDS, problem: ["problem"] }; // ring modes: one field per pass
 const PILE = { what: P.WHAT, who: P.WHO, problem: P.PROBLEM };
@@ -28,14 +30,15 @@ const vip = (r) => online(r).find((id) => r.lead && r.players.get(id).dev === r.
 const brief = () => ({ what: pick(P.WHAT), who: pick(P.WHO), problem: pick(P.PROBLEM) });
 
 function createRoom(code, link) {
-  return { code, link, invite: null, party: null, players: new Map(), order: [], phase: "lobby", rounds: 2, round: 0,
-    mode: "zufall", same: false, drawSecs: 180, write: null, setter: null,
+  return { code, link, invite: null, party: null, players: new Map(), order: [], phase: "lobby", round: 0,
+    cfg: { rounds: 2, mode: "zufall", same: false, drawSecs: 180, pitchSecs: 60 }, play: null, write: null, setter: null, sent: new Set(),
     briefs: new Map(), ideas: new Map(), queue: [], cur: 0, stage: "", budget: new Map(), inv: new Map(), results: null,
     deadline: 0, timer: null, cleanup: null };
 }
 
 const presenter = (r) => r.queue[r.cur];
-const investors = (r) => online(r).filter((id) => id !== presenter(r) && r.budget.has(id));
+// everyone with a budget who has someone else's product to put money in
+const investors = (r) => online(r).filter((id) => r.budget.has(id) && r.queue.some((q) => q !== id));
 const imgUrl = (r, id) => `/img/${r.code}/${id}-${r.round}-${r.ideas.get(id).v}.png`;
 function card(r, id) {
   const i = r.ideas.get(id), b = r.briefs.get(id);
@@ -44,17 +47,18 @@ function card(r, id) {
 
 // one snapshot per player: everyone sees the stage, plus their own brief, budget and investment
 function view(r, id) {
-  const pid = presenter(r), inv = pid ? r.inv.get(pid) : null;
+  const pid = presenter(r), c = r.cfg;
   return {
     phase: r.phase, stage: r.stage, code: r.code, party: r.party, link: r.invite || `${r.link}/?code=${r.code}`,
-    rounds: r.rounds, roundChoices: ROUND_CHOICES, round: r.round, min: MIN_PLAYERS, max: MAX_PLAYERS, budgetMax: BUDGET, step: STEP,
-    mode: r.mode, same: r.same, drawSecs: r.drawSecs, drawChoices: DRAW_CHOICES, total: total(r),
+    rounds: c.rounds, roundChoices: ROUND_CHOICES, round: r.round, min: MIN_PLAYERS, max: MAX_PLAYERS, budgetMax: BUDGET, step: STEP,
+    mode: c.mode, same: c.same, drawSecs: c.drawSecs, drawChoices: DRAW_CHOICES, pitchSecs: c.pitchSecs, pitchChoices: PITCH_CHOICES, total: total(r),
     write: r.write && { kind: r.write.kind, step: r.write.step, setter: r.write.setter && r.players.get(r.write.setter).name, task: task(r, id), done: r.write.done.has(id) },
-    setter: r.setter === id, rerollable: r.mode === "zufall" && !r.same,
+    setter: r.setter === id, rerollable: !!r.play && r.play.mode === "zufall" && !r.play.same,
     you: id, vip: id === vip(r), left: Math.max(0, r.deadline - Date.now()),
     brief: r.briefs.get(id) || null, rerolled: !!r.briefs.get(id)?.rerolled, submitted: r.ideas.has(id), playing: r.briefs.has(id),
-    pitch: r.phase === "pitch" && pid ? { ...card(r, pid), index: r.cur + 1, count: r.queue.length,
-      decided: inv.size, needed: investors(r).length, mine: inv.has(id) ? inv.get(id) : null } : null,
+    pitch: r.phase === "pitch" && pid ? { ...card(r, pid), index: r.cur + 1, count: r.queue.length } : null,
+    invest: r.phase === "invest" ? { products: r.queue.map((q) => card(r, q)), can: investors(r).includes(id), sent: r.sent.has(id),
+      decided: r.sent.size, needed: investors(r).length } : null,
     budget: r.budget.get(id) ?? 0,
     results: r.results,
     players: r.order.map((p) => { const q = r.players.get(p);
@@ -64,8 +68,9 @@ function view(r, id) {
 // length of the current phase in seconds, for the phones' timer bar
 function total(r) {
   if (r.phase === "write") return T[r.write.kind];
-  if (r.phase === "develop") return r.drawSecs;
-  if (r.phase === "pitch") return T[r.stage];
+  if (r.phase === "develop") return r.play.drawSecs;
+  if (r.phase === "pitch") return r.play.pitchSecs;
+  if (r.phase === "invest") return T.invest;
   return r.phase === "results" ? T.results : 0;
 }
 // what this player has to write right now (write phase), or null
@@ -104,26 +109,27 @@ function kick(r, id) {
 // ---------------------------------------------------------------- flow
 function startRound(r) {
   r.round++;
-  const ids = online(r);
-  r.briefs = new Map(); r.ideas = new Map(); r.inv = new Map(); r.results = null; r.setter = null;
+  r.play = { ...r.cfg }; // settings changed from now on apply to the next round
+  const ids = online(r), mode = r.play.mode;
+  r.briefs = new Map(); r.ideas = new Map(); r.inv = new Map(); r.sent = new Set(); r.results = null; r.setter = null;
   r.budget = new Map(ids.map((id) => [id, BUDGET]));
   r.stage = "";
-  if (r.mode === "auftrag") { // the client rotates every round
+  if (mode === "auftrag") { // the client rotates every round
     r.setter = ids[(r.round - 1) % ids.length];
     r.write = { kind: "auftrag", setter: r.setter, step: 0, done: new Set(), parts: {} };
-  } else if (STEPS[r.mode]) {
+  } else if (STEPS[mode]) {
     const ring = shuffle([...ids]);
-    r.write = { kind: r.mode, ring, step: 0, done: new Set(), chains: ring.map(() => ({ by: [] })) };
+    r.write = { kind: mode, ring, step: 0, done: new Set(), chains: ring.map(() => ({ by: [] })) };
   }
   if (r.write) { r.phase = "write"; later(r, T[r.write.kind], () => endWrite(r)); return push(r); }
-  const shared = r.same ? brief() : null;
+  const shared = r.play.same ? brief() : null;
   ids.forEach((id) => r.briefs.set(id, shared ? { ...shared } : brief()));
   develop(r);
 }
 function develop(r) {
   r.write = null;
   r.phase = "develop";
-  later(r, r.drawSecs + T.grace, () => startPitches(r)); // the grace lets phones auto-submit what they have
+  later(r, r.play.drawSecs + T.grace, () => startPitches(r)); // the grace lets phones auto-submit what they have
   push(r);
 }
 
@@ -157,22 +163,20 @@ function startPitches(r) {
   r.phase = "pitch";
   talk(r);
 }
-function talk(r) { r.stage = "talk"; later(r, T.talk, () => invest(r)); push(r); }
-function invest(r) {
-  if (r.phase !== "pitch") return;
-  r.stage = "invest";
-  later(r, T.invest, () => nextPitch(r));
-  push(r);
-  check(r);
-}
+function talk(r) { r.stage = "talk"; later(r, r.play.pitchSecs, () => nextPitch(r)); push(r); }
 function nextPitch(r) {
   if (r.phase !== "pitch") return;
   r.cur++;
-  if (r.cur >= r.queue.length) return showResults(r);
-  talk(r);
+  if (r.cur < r.queue.length) return talk(r);
+  // all pitched: now everyone shares their budget among the others' products
+  r.phase = "invest"; r.stage = "";
+  later(r, T.invest + T.grace, () => showResults(r)); // the grace lets phones hand in what they have set
+  push(r);
+  check(r);
 }
 
 function showResults(r) {
+  if (r.phase !== "invest" && r.phase !== "develop") return;
   const list = r.queue.map((id) => {
     const got = [...r.inv.get(id)].filter(([, a]) => a > 0);
     const raised = got.reduce((s, [, a]) => s + a, 0);
@@ -180,7 +184,7 @@ function showResults(r) {
     return { ...card(r, id), raised, investors: got.map(([inv, amount]) => ({ name: r.players.get(inv).name, amount })) };
   }).sort((a, b) => b.raised - a.raised);
   r.results = { list };
-  r.phase = r.round >= r.rounds ? "end" : "results";
+  r.phase = r.round >= r.cfg.rounds ? "end" : "results";
   r.stage = "";
   if (r.phase === "results") later(r, T.results, () => { if (r.phase === "results") startRound(r); });
   else { clearTimeout(r.timer); r.deadline = 0; }
@@ -195,8 +199,9 @@ function check(r) {
     if (online(r).filter((id) => r.briefs.has(id)).every((id) => r.ideas.has(id))) startPitches(r);
   } else if (r.phase === "pitch") {
     const pid = presenter(r);
-    if (r.stage === "talk" && !r.players.get(pid).online) invest(r); // presenter gone: straight to the money
-    else if (r.stage === "invest" && investors(r).every((id) => r.inv.get(pid).has(id))) nextPitch(r);
+    if (!r.players.get(pid).online) nextPitch(r); // presenter gone: next one
+  } else if (r.phase === "invest") {
+    if (investors(r).every((id) => r.sent.has(id))) showResults(r);
   }
 }
 
@@ -209,12 +214,13 @@ function onPlayer(r, id, d) {
     r.round = 0;
     r.order.forEach((p) => { r.players.get(p).money = 0; });
     startRound(r);
-  } else if (d.a === "rounds" && boss && r.phase === "lobby" && ROUND_CHOICES.includes(d.value)) {
-    r.rounds = d.value; push(r);
-  } else if (d.a === "settings" && boss && r.phase === "lobby") {
-    if (MODES.includes(d.mode)) r.mode = d.mode;
-    if (typeof d.same === "boolean") r.same = d.same;
-    if (DRAW_CHOICES.includes(d.draw)) r.drawSecs = d.draw;
+  } else if (d.a === "rounds" && boss && ROUND_CHOICES.includes(d.value)) {
+    r.cfg.rounds = d.value; push(r);
+  } else if (d.a === "settings" && boss) { // any time; a running round keeps its own copy (r.play)
+    if (MODES.includes(d.mode)) r.cfg.mode = d.mode;
+    if (typeof d.same === "boolean") r.cfg.same = d.same;
+    if (DRAW_CHOICES.includes(d.draw)) r.cfg.drawSecs = d.draw;
+    if (PITCH_CHOICES.includes(d.pitch)) r.cfg.pitchSecs = d.pitch;
     push(r);
   } else if (d.a === "write" && r.phase === "write" && task(r, id) && !r.write.done.has(id)) {
     const t = task(r, id), w = r.write, name = r.players.get(id).name;
@@ -223,24 +229,27 @@ function onPlayer(r, id, d) {
     if (w.kind !== "auftrag") target.by.push(name);
     w.done.add(id);
     push(r); check(r);
-  } else if (d.a === "reroll" && r.mode === "zufall" && !r.same && r.phase === "develop" && r.briefs.has(id) && !r.briefs.get(id).rerolled && !r.ideas.has(id)) {
+  } else if (d.a === "reroll" && r.play?.mode === "zufall" && !r.play.same && r.phase === "develop" && r.briefs.has(id) && !r.briefs.get(id).rerolled && !r.ideas.has(id)) {
     r.briefs.set(id, { ...brief(), rerolled: true }); push(r);
   } else if (d.a === "submit" && r.phase === "develop" && r.briefs.has(id) && !r.ideas.has(id) && Buffer.isBuffer(d.img)) {
     r.ideas.set(id, { name: clean(d.name, 30) || "Namenlos", slogan: clean(d.slogan, 90), img: d.img, v: Date.now().toString(36) });
     push(r); check(r);
-  } else if (d.a === "done" && r.phase === "pitch" && r.stage === "talk" && (id === presenter(r) || boss)) {
-    invest(r);
-  } else if (d.a === "invest" && r.phase === "pitch" && r.stage === "invest" && id !== presenter(r) && r.budget.has(id)) {
-    const inv = r.inv.get(presenter(r));
-    const amount = Number(d.amount);
-    if (inv.has(id) || !Number.isInteger(amount) || amount < 0 || amount % STEP || amount > r.budget.get(id)) return;
-    inv.set(id, amount);
-    r.budget.set(id, r.budget.get(id) - amount);
+  } else if (d.a === "done" && r.phase === "pitch" && (id === presenter(r) || boss)) {
+    nextPitch(r);
+  } else if (d.a === "invest" && r.phase === "invest" && investors(r).includes(id) && !r.sent.has(id) && d.alloc && typeof d.alloc === "object") {
+    // the whole split in one message, { productOwnerId: amount }: only others' products, steps of STEP, within the budget
+    const split = Object.entries(d.alloc).map(([to, a]) => [to, Number(a)]).filter(([, a]) => a !== 0);
+    if (split.some(([to, a]) => to === id || !r.inv.has(to) || !Number.isInteger(a) || a < 0 || a % STEP)) return;
+    const sum = split.reduce((t, [, a]) => t + a, 0);
+    if (sum > r.budget.get(id)) return;
+    split.forEach(([to, a]) => r.inv.get(to).set(id, a));
+    r.budget.set(id, r.budget.get(id) - sum);
+    r.sent.add(id);
     push(r); check(r);
   } else if (d.a === "next" && boss && r.phase === "results") {
     startRound(r);
   } else if (d.a === "restart" && boss && r.phase === "end") {
-    r.phase = "lobby"; r.round = 0; r.results = null; r.briefs = new Map(); r.ideas = new Map(); r.write = null; r.setter = null; push(r);
+    r.phase = "lobby"; r.round = 0; r.play = null; r.results = null; r.briefs = new Map(); r.ideas = new Map(); r.write = null; r.setter = null; push(r);
   } else if (d.a === "kick" && boss && d.id !== id) {
     kick(r, String(d.id));
   }

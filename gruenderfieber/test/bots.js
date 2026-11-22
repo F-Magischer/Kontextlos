@@ -58,21 +58,31 @@ function bot() {
   const img = await fetch(`http://localhost:${PORT}${s.pitch.img}`);
   assert.strictEqual(img.headers.get("content-type"), "image/png");
 
+  // the boss may change settings mid-round: shown at once, used from the next round
+  a.act({ a: "settings", pitch: 30 });
+  s = (await a.next((m) => m.t === "state" && m.d.pitchSecs === 30)).d;
+  assert.strictEqual(s.total, 60, "this round keeps its pitch time");
+  b.act({ a: "settings", pitch: 90 }); // not the boss: ignored
+
+  // everyone pitches first, investing comes after the last pitch
   const bots = { Anna: a, Ben: b, Cem: c };
-  const raised = {};
   for (let i = 1; i <= 3; i++) {
-    if (i > 1) s = (await a.next((m) => m.t === "state" && m.d.phase === "pitch" && m.d.pitch.index === i && m.d.stage === "talk")).d;
-    const pres = s.pitch.name;
-    bots[pres].act({ a: "done" });
-    await a.next((m) => m.t === "state" && m.d.stage === "invest" && m.d.pitch.index === i);
-    const others = Object.keys(bots).filter((n) => n !== pres);
-    bots[others[0]].act({ a: "invest", amount: 33 }); // not a multiple of 5: ignored
-    bots[others[0]].act({ a: "invest", amount: 30 });
-    bots[others[1]].act({ a: "invest", amount: 0 });
-    raised[pres] = 30;
+    if (i > 1) s = (await a.next((m) => m.t === "state" && m.d.phase === "pitch" && m.d.pitch.index === i)).d;
+    bots[s.pitch.name].act({ a: "done" });
   }
+  const inv = (await a.next((m) => m.t === "state" && m.d.phase === "invest")).d;
+  assert.strictEqual(inv.invest.products.length, 3);
+  assert.ok(inv.invest.can && inv.pitchSecs === 30);
+  const id = Object.fromEntries(inv.players.map((p) => [p.name, p.id]));
+  a.act({ a: "invest", alloc: { [id.Anna]: 10 } }); // own product: ignored
+  a.act({ a: "invest", alloc: { [id.Ben]: 33 } }); // not a multiple of 5: ignored
+  a.act({ a: "invest", alloc: { [id.Ben]: 60, [id.Cem]: 50 } }); // over budget: ignored
+  a.act({ a: "invest", alloc: { [id.Ben]: 60, [id.Cem]: 40 } });
+  b.act({ a: "invest", alloc: { [id.Anna]: 100 } });
+  c.act({ a: "invest", alloc: {} }); // keeps the money
   const res = (await a.next((m) => m.t === "state" && m.d.phase === "end")).d;
   assert.strictEqual(res.results.list.length, 3);
+  const raised = { Anna: 100, Ben: 60, Cem: 40 };
   for (const p of res.players) assert.strictEqual(p.money, raised[p.name], p.name);
   a.act({ a: "restart" });
   await a.next((m) => m.t === "state" && m.d.phase === "lobby");

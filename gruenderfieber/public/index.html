@@ -82,7 +82,10 @@ input#code { letter-spacing: .3em; text-transform: uppercase; }
 .pad { display: grid; gap: 10px; }
 canvas { width: 100%; aspect-ratio: 4 / 3; background: #fff; border-radius: 16px; touch-action: none; display: block; cursor: crosshair; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.sw { width: 34px; height: 34px; border-radius: 50%; padding: 0; border: 3px solid transparent; box-shadow: none; flex: none; }
+.sw { width: 30px; height: 30px; border-radius: 50%; padding: 0; border: 3px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); flex: none; }
+.cols { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw.pick { position: relative; overflow: hidden; background: conic-gradient(#FF3B30, #FFE03B, #3DDC97, #48DBFB, #5B8CFF, #C77DFF, #FF3B30); }
+.sw.pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; padding: 0; }
 .sw.on { border-color: var(--text); }
 .sz { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; background: var(--s2); border: 1px solid var(--line); box-shadow: none; border-radius: 10px; }
 .sz i { background: var(--text); border-radius: 50%; display: block; }
@@ -109,6 +112,13 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px;
 input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); border: 4px solid var(--bg); }
 .quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } .quick button { font-size: 14px; padding: 9px 4px; background: var(--s2); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
 .progress { text-align: center; font-weight: 800; color: var(--muted); }
+.ip { display: grid; grid-template-columns: 96px 1fr auto; gap: 8px 12px; align-items: center; }
+.ip img { width: 96px; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 10px; }
+.ip .amt { font-size: 22px; font-weight: 800; color: var(--mint); }
+.ip input { grid-column: 1 / -1; }
+.ip .sl { color: var(--gold); font-style: italic; font-size: 15px; }
+.ip.own { opacity: .55; }
+.left { position: sticky; top: 0; z-index: 5; background: var(--s1); }
 
 /* results */
 .res { display: grid; grid-template-columns: 96px 1fr auto; gap: 14px; align-items: center; animation: up .45s cubic-bezier(.16,1,.3,1) both; }
@@ -127,7 +137,7 @@ input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 
 /* party: FURIDA button only in the lobby, quit dialog, party page iframe */
 .modal { position: fixed; inset: 0; z-index: 60; background: rgba(5,8,10,.65); display: flex; align-items: center; justify-content: center; padding: 18px; }
 .modal[hidden], .quit[hidden], .pbtn[hidden] { display: none; }
-.modal .card { max-width: 420px; width: 100%; display: grid; gap: 10px; animation: up .3s both; }
+.modal .card { max-width: 420px; width: 100%; max-height: calc(100dvh - 36px); overflow-y: auto; display: grid; gap: 10px; animation: up .3s both; }
 .quit { width: auto; padding: 6px 8px; line-height: 0; background: var(--s2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; box-shadow: none; }
 .pbtn { width: auto; padding: 5px 10px; font-size: 13px; letter-spacing: .1em; border-radius: 10px; background: linear-gradient(100deg, #7C5CFF, #22D3EE); color: #fff; position: relative; box-shadow: none; }
 .pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--gold); color: var(--bg); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
@@ -146,10 +156,12 @@ iframe.party.open { width: 100%; height: 100%; visibility: visible; }
 <body>
 <div class="wrap">
 <header><a class="logo" href="/" title="Zur Startseite"><i>€</i>GRÜNDERFIEBER</a><div class="hr">
-<button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><div class="who" id="who"></div>
+<button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><button id="setBtn" class="quit" hidden title="Einstellungen" aria-label="Einstellungen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg></button><div class="who" id="who"></div>
 <button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
 <main id="app"></main>
 </div>
+<div id="setbox" class="modal" hidden><div class="card"><div class="top"><h2>Einstellungen</h2><button class="small ghost" id="setClose">Fertig</button></div>
+<p class="muted">Änderungen gelten ab der nächsten Runde.</p><div id="setcard" class="stack"></div></div></div>
 <div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p class="muted">Du verlässt die Party und gehst zurück zur Lobby.</p>
 <button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
 <script>
@@ -174,7 +186,7 @@ const eur = (k) => (k * 1000).toLocaleString("de-DE") + " €";
 // FURIDA party overlay: only on the platform domain (local tests: localStorage gf_party = "http://localhost:8090")
 let ws, me = null, joining = false, st = null, shown = "", ends = 0, partyCode = null;
 // the drawing lives outside the DOM, so redraws of the screen never lose it
-let actions = [], tool = "pen", ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, invest = 0;
+let actions = [], tool = "pen", ink = "#101418", size = 8, pname = "", pslogan = "", sentRound = 0, alloc = {}, allocRound = 0;
 
 function connect(code, name, create = false, party = null) {
   joining = true;
@@ -238,17 +250,21 @@ function show(d) {
   const p = d.pitch;
   const key = d.phase === "write" ? `write:${d.round}:${d.write.step}:${d.write.done}`
     : d.phase === "develop" ? `dev:${d.round}:${d.submitted}:${d.playing}:${d.rerolled}`
-    : d.phase === "pitch" ? `pitch:${d.round}:${p.index}:${d.stage}:${p.mine !== null}`
+    : d.phase === "pitch" ? `pitch:${d.round}:${p.index}`
+    : d.phase === "invest" ? `invest:${d.round}:${d.invest.sent}:${d.invest.can}`
     : d.phase === "results" || d.phase === "end" ? `${d.phase}:${d.round}:${d.vip}`
-    : "lobby:" + JSON.stringify(d.players) + [d.rounds, d.vip, d.mode, d.same, d.drawSecs];
+    : "lobby:" + JSON.stringify(d.players) + [d.rounds, d.vip, d.mode, d.same, d.drawSecs, d.pitchSecs];
+  $("#setBtn").hidden = !(d.vip && d.phase !== "lobby");
+  if (!d.vip) $("#setbox").hidden = true;
+  if (!$("#setbox").hidden) $("#setcard").innerHTML = settings(d);
   if (key === shown) return update();
   shown = key;
-  ({ lobby, write, develop, pitch, results: resultsScreen, end })[d.phase]();
+  ({ lobby, write, develop, pitch, invest: investScreen, results: resultsScreen, end })[d.phase]();
 }
 // small live bits that change without redrawing the screen
 function update() {
   if (st.phase === "develop" || st.phase === "write") { const el = $("#done"); if (el) el.innerHTML = doneList(new Set(st.players.filter((p) => p.done).map((p) => p.id))); }
-  if (st.phase === "pitch") { const el = $("#progress"); if (el) el.textContent = `${st.pitch.decided} von ${st.pitch.needed} Investoren haben entschieden`; }
+  if (st.phase === "invest") { const el = $("#progress"); if (el) el.textContent = `${st.invest.decided} von ${st.invest.needed} haben investiert`; }
 }
 
 function lobby() {
@@ -256,20 +272,16 @@ function lobby() {
   app.innerHTML = `<div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
       <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
     <div class="stack"><span class="label">${on.length} / ${d.max} Gründer:innen</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
-    <div class="card stack"><span class="label">Spielmodus</span>
-      ${d.vip ? `<div class="seg modes">${Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" class="${k === d.mode ? "on" : ""}">${m[0]}</button>`).join("")}</div>` : `<h2>${MODES[d.mode][0]}</h2>`}
-      <p class="muted">${MODES[d.mode][1]}</p>
-      ${d.mode === "zufall" ? (d.vip ? `<div class="seg"><button data-same="0" class="${d.same ? "" : "on"}">Jede:r eigene Karten</button><button data-same="1" class="${d.same ? "on" : ""}">Gleiche Karten für alle</button></div>` : `<p class="muted">${d.same ? "Alle bekommen dieselben Karten." : "Jede:r bekommt eigene Karten."}</p>`) : ""}
-      <span class="label">Zeichenzeit</span>${d.vip ? `<div class="seg">${d.drawChoices.map((s) => `<button data-draw="${s}" class="${s === d.drawSecs ? "on" : ""}">${s / 60} Min.</button>`).join("")}</div>` : `<p class="muted">${d.drawSecs / 60} Minuten</p>`}</div>
-    ${d.vip ? `<div class="stack"><span class="label">Runden (jede:r pitcht einmal pro Runde)</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
+    <div class="card stack">${settings(d)}</div>
+    ${d.vip ? `<div class="stack">
       <button id="start" ${on.length >= d.min ? "" : "disabled"}>${on.length >= d.min ? "Alle da – los geht's!" : `Noch ${d.min - on.length} fehlen`}</button></div>
       ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
       : `<div class="card"><p>${d.rounds} ${d.rounds === 1 ? "Runde" : "Runden"}. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
     <div class="card stack"><h2>So geht's</h2>
       <p class="muted"><b>1.</b> Du bekommst deine Aufgabe: was, für wen, welches Problem – oder nur ein Problem. Je nach Modus vom Spiel oder von den anderen.</p>
       <p class="muted"><b>2.</b> In ${d.drawSecs / 60} Minuten zeichnest du dein Produkt (Stift und Füllen) und gibst ihm Namen und Slogan.</p>
-      <p class="muted"><b>3.</b> Reihum pitcht jede:r eine Minute lang – laut, vor allen.</p>
-      <p class="muted"><b>4.</b> Nach jedem Pitch investieren die anderen aus ihrem Rundenbudget von ${eur(d.budgetMax)}. Wer am Ende das meiste Kapital eingesammelt hat, gewinnt.</p></div>
+      <p class="muted"><b>3.</b> Reihum pitcht jede:r ${secs(d.pitchSecs)} lang – laut, vor allen.</p>
+      <p class="muted"><b>4.</b> Nach allen Pitches verteilt jede:r sein Rundenbudget von ${eur(d.budgetMax)} auf die Produkte der anderen. Wer am Ende das meiste Kapital eingesammelt hat, gewinnt.</p></div>
     ${PARTY ? furidaAd() : ""}`;
   $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Kopiert!"; } catch { $("#copied").textContent = d.party || d.code; } };
   $("#share").onclick = async () => {
@@ -278,13 +290,34 @@ function lobby() {
   };
   if (d.vip) {
     $("#start").onclick = () => out({ a: "start" });
-    app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => out({ a: "rounds", value: +b.dataset.rounds }));
-    app.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => out({ a: "settings", mode: b.dataset.mode }));
-    app.querySelectorAll("[data-same]").forEach((b) => b.onclick = () => out({ a: "settings", same: b.dataset.same === "1" }));
-    app.querySelectorAll("[data-draw]").forEach((b) => b.onclick = () => out({ a: "settings", draw: +b.dataset.draw }));
     app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => out({ a: "kick", id: b.dataset.kick }));
   }
 }
+
+// settings: the boss changes them in the lobby or (dialog) during the game; others see a summary
+const secs = (n) => n < 60 ? n + " Sekunden" : n === 60 ? "eine Minute" : n / 60 + " Minuten";
+function settings(d) {
+  const seg = (attr, list, cur, label) => `<div class="seg">${list.map((v) => `<button data-${attr}="${v}" class="${v === cur ? "on" : ""}">${label(v)}</button>`).join("")}</div>`;
+  if (!d.vip) return `<span class="label">Spielmodus</span><h2>${MODES[d.mode][0]}</h2><p class="muted">${MODES[d.mode][1]}</p>
+    ${d.mode === "zufall" ? `<p class="muted">${d.same ? "Alle bekommen dieselben Karten." : "Jede:r bekommt eigene Karten."}</p>` : ""}
+    <p class="muted">${d.rounds} ${d.rounds === 1 ? "Runde" : "Runden"} · ${d.drawSecs / 60} Min. zeichnen · ${d.pitchSecs} s pitchen</p>`;
+  return `<span class="label">Spielmodus</span><div class="seg modes">${Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" class="${k === d.mode ? "on" : ""}">${m[0]}</button>`).join("")}</div>
+    <p class="muted">${MODES[d.mode][1]}</p>
+    ${d.mode === "zufall" ? seg("same", [0, 1], +d.same, (v) => v ? "Gleiche Karten für alle" : "Jede:r eigene Karten") : ""}
+    <span class="label">Zeichenzeit</span>${seg("draw", d.drawChoices, d.drawSecs, (v) => v / 60 + " Min.")}
+    <span class="label">Pitchzeit</span>${seg("pitch", d.pitchChoices, d.pitchSecs, (v) => v + " s")}
+    <span class="label">Runden (jede:r pitcht einmal pro Runde)</span>${seg("rounds", d.roundChoices, d.rounds, (v) => v)}`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode],[data-same],[data-draw],[data-pitch],[data-rounds]");
+  if (!b || !st?.vip) return;
+  const k = b.dataset;
+  if (k.rounds) out({ a: "rounds", value: +k.rounds });
+  else out({ a: "settings", ...(k.mode ? { mode: k.mode } : k.same ? { same: k.same === "1" } : k.draw ? { draw: +k.draw } : { pitch: +k.pitch }) });
+});
+$("#setBtn").onclick = () => { $("#setcard").innerHTML = settings(st); $("#setbox").hidden = false; };
+$("#setClose").onclick = () => { $("#setbox").hidden = true; };
+$("#setbox").addEventListener("click", (e) => { if (e.target.id === "setbox") $("#setbox").hidden = true; });
 
 // ---------------------------------------------------------------- write: the client's brief, or one part of a chain card
 const FIELD = { what: ["Was soll erfunden werden?", "z. B. Ein Wecker"], who: ["Für wen?", "z. B. für Vampire"], problem: ["Welches Problem löst es?", "z. B. Die Nacht ist zu kurz."] };
@@ -322,15 +355,17 @@ function develop() {
       <p class="muted">Bereite deinen Pitch vor: Was ist es? Welches Problem löst es? Warum muss man es haben?</p><div id="done">${doneList(done)}</div></div>`;
     return;
   }
-  const COLS = ["#101418", "#FF6B6B", "#3DDC97", "#5B8CFF", "#FFC857", "#C77DFF", "#8B5A2B", "#FFFFFF"];
+  const COLS = ["#101418", "#6B7280", "#C8CDD2", "#FFFFFF", "#9B1C1C", "#FF3B30", "#FF6B6B", "#FF8FC8", "#F368E0", "#8E44AD", "#C77DFF", "#1E3A8A",
+    "#5B8CFF", "#48DBFB", "#00A8A8", "#3DDC97", "#2E9E44", "#A3E635", "#6B7F2A", "#FFE03B", "#FFC857", "#FF9F43", "#8B5A2B", "#E0B386", "#F5CBA7"];
   const by = d.brief.by && d.brief.by.length ? `<span class="label">Karte von ${d.brief.by.map(esc).join(" → ")}</span>` : "";
   app.innerHTML = head("Entwickeln") + by + briefCards(d.brief)
     + (d.rerollable && !d.rerolled ? `<button class="ghost small" id="reroll">Neue Karten ziehen (1× pro Runde)</button>` : "")
     + `<div class="card pad"><canvas id="pad" width="800" height="600"></canvas>
       <div class="tools"><div class="mode"><button class="${tool === "pen" ? "on" : ""}" data-t="pen">✏️ Stift</button><button class="${tool === "fill" ? "on" : ""}" data-t="fill">🪣 Füllen</button></div>
         <span class="sp"></span><button class="small ghost" id="undo">Zurück</button><button class="small ghost" id="clear">Leeren</button></div>
-      <div class="tools">${COLS.map((c) => `<button class="sw ${c === ink ? "on" : ""}" data-c="${c}" style="background:${c}" title="${c === "#FFFFFF" ? "Weiß / Radierer" : "Farbe"}"></button>`).join("")}
-        <span class="sp"></span>${[4, 8, 18].map((s) => `<button class="sz ${s === size ? "on" : ""}" data-s="${s}" aria-label="Pinsel ${s}"><i style="width:${s + 2}px;height:${s + 2}px"></i></button>`).join("")}</div></div>
+      <div class="cols">${COLS.map((c) => `<button class="sw ${c === ink ? "on" : ""}" data-c="${c}" style="background:${c}" title="${c === "#FFFFFF" ? "Weiß / Radierer" : "Farbe"}" aria-label="Farbe ${c}"></button>`).join("")}
+        <label class="sw pick ${COLS.includes(ink) ? "" : "on"}" title="Eigene Farbe"${COLS.includes(ink) ? "" : ` style="background:${ink}"`}><input type="color" id="cpick" value="${ink}" aria-label="Eigene Farbe"></label></div>
+      <div class="tools"><span class="sp"></span>${[4, 8, 18].map((s) => `<button class="sz ${s === size ? "on" : ""}" data-s="${s}" aria-label="Pinsel ${s}"><i style="width:${s + 2}px;height:${s + 2}px"></i></button>`).join("")}</div></div>
     <div class="row2"><div><label class="label" for="pname">Produktname</label><input id="pname" maxlength="30" placeholder="z. B. Sockenradar 3000" value="${esc(pname)}"></div>
       <div><label class="label" for="pslogan">Slogan</label><input id="pslogan" maxlength="90" placeholder="z. B. Nie wieder einsam im Trockner." value="${esc(pslogan)}"></div></div>
     <button id="submit" class="gold">Idee einreichen</button><div id="done">${doneList(done)}</div>`;
@@ -339,7 +374,8 @@ function develop() {
   $("#pslogan").oninput = (e) => { pslogan = e.target.value; };
   const pickOne = (sel, el) => app.querySelectorAll(sel).forEach((x) => x.classList.toggle("on", x === el));
   app.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { tool = b.dataset.t; pickOne("[data-t]", b); });
-  app.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => { ink = b.dataset.c; pickOne("[data-c]", b); });
+  app.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => { ink = b.dataset.c; pickOne("[data-c], .pick", b); });
+  $("#cpick").oninput = (e) => { ink = e.target.value.toUpperCase(); const l = e.target.parentNode; l.style.background = ink; pickOne("[data-c], .pick", l); };
   app.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { size = +b.dataset.s; tool = "pen"; pickOne("[data-s]", b); pickOne("[data-t]", app.querySelector('[data-t="pen"]')); });
   $("#undo").onclick = () => { actions.pop(); paint(); };
   $("#clear").onclick = () => { actions = []; paint(); };
@@ -411,43 +447,52 @@ const blank = () => { const c = document.createElement("canvas"); c.width = 800;
 
 // ---------------------------------------------------------------- pitch + invest
 function pitch() {
-  const d = st, p = d.pitch, mine = p.id === d.you, investor = d.playing && !mine;
-  const top = head(d.stage === "talk" ? `Pitch ${p.index} / ${p.count}` : "Investieren");
-  if (d.stage === "talk") {
+  const d = st, p = d.pitch, mine = p.id === d.you;
+  const top = head(`Pitch ${p.index} / ${p.count}`);
+  {
     app.innerHTML = top + (mine
       ? `<div class="card spot stack"><h1>Du bist dran!</h1><p>Überzeug die Investoren – laut und mit voller Überzeugung.</p>
           <ul class="tips muted"><li>Was ist dein Produkt?</li><li>Welches Problem löst es?</li><li>Warum muss man es haben?</li><li>Was macht es einzigartig?</li></ul></div>`
-      : `<div class="card spot"><h2>${esc(p.name)} pitcht gerade</h2><p class="muted">Hör gut zu – gleich wird investiert.</p></div>`)
+      : `<div class="card spot"><h2>${esc(p.name)} pitcht gerade</h2><p class="muted">Hör gut zu – investiert wird nach dem letzten Pitch.</p></div>`)
       + productCard(p) + (mine || d.vip ? `<button id="done" class="${mine ? "gold" : "ghost"}">${mine ? "Pitch beenden" : "Pitch überspringen"}</button>` : "");
     if (mine || d.vip) $("#done").onclick = () => out({ a: "done" });
     return;
   }
-  let h = top + productCard(p);
-  if (investor && p.mine === null && d.budget > 0) {
-    invest = 0;
-    h += `<div class="card stack"><div class="top"><span>Wie viel investierst du in ${esc(p.product)}?</span><span class="muted">Budget: ${eur(d.budget)}</span></div>
-      <div class="money" id="amt">${eur(0)}</div>
-      <input type="range" id="slider" min="0" max="${d.budget}" step="${d.step}" value="0">
-      <div class="quick">${[0, 10, 25, 50, d.budget].map((v, i) => `<button data-q="${Math.min(v, d.budget)}">${i === 4 ? "Alles" : v ? v + "k" : "0"}</button>`).join("")}</div>
-      <div class="row2"><button class="ghost" id="pass">Passen</button><button id="invest">Investieren</button></div></div>`;
-  } else if (investor) {
-    h += `<div class="card stack" style="text-align:center">${p.mine !== null ? `<span class="label">Deine Entscheidung</span><div class="money">${p.mine ? eur(p.mine) : "Gepasst"}</div>` : `<h2>Dein Budget ist aufgebraucht.</h2>`}
-      <p class="muted">Restbudget diese Runde: ${eur(d.budget)}</p></div>`;
-  } else {
-    h += `<div class="card spot"><h2>${mine ? "Die Investoren entscheiden …" : "Die anderen investieren …"}</h2></div>`;
-  }
-  h += `<div class="progress" id="progress">${p.decided} von ${p.needed} Investoren haben entschieden</div>`;
-  app.innerHTML = h;
-  if (investor && p.mine === null && d.budget > 0) {
-    const set = (v) => { invest = v; $("#slider").value = v; $("#amt").textContent = eur(v); $("#slider").style.setProperty("--p", (d.budget ? v / d.budget * 100 : 0) + "%"); };
-    $("#slider").oninput = (e) => set(+e.target.value);
-    app.querySelectorAll("[data-q]").forEach((b) => b.onclick = () => set(+b.dataset.q));
-    $("#invest").onclick = () => out({ a: "invest", amount: invest });
-    $("#pass").onclick = () => out({ a: "invest", amount: 0 });
-  }
 }
-// an investor with no money left decides automatically: nothing
-setInterval(() => { if (st?.phase === "pitch" && st.stage === "invest" && st.playing && st.pitch.id !== st.you && st.pitch.mine === null && st.budget === 0) out({ a: "invest", amount: 0 }); }, 1000);
+
+function investScreen() {
+  const d = st, v = d.invest, top = head("Investieren");
+  if (!v.can || v.sent) {
+    app.innerHTML = top + `<div class="card spot stack"><h2>${v.sent ? "Investiert!" : "Die anderen investieren …"}</h2><p class="muted">Gleich seht ihr, wer die Investoren überzeugt hat.</p></div>
+      <div class="progress" id="progress">${v.decided} von ${v.needed} haben investiert</div>`;
+    return;
+  }
+  if (allocRound !== d.round) { alloc = {}; allocRound = d.round; }
+  const left = () => d.budget - Object.values(alloc).reduce((s, a) => s + a, 0);
+  app.innerHTML = top + `<div class="card stack left"><div class="top"><span>Verteil dein Budget</span><span class="money" id="left" style="font-size:28px">${eur(left())}</span></div>
+      <p class="muted">Schieb Geld in die Produkte, die dich überzeugt haben. Was du nicht verteilst, verfällt.</p></div>
+    ${v.products.map((p) => p.id === d.you ? `<div class="card ip own"><img src="${esc(p.img)}" alt=""><div><b>${esc(p.product)}</b><div class="muted">Dein Produkt</div></div></div>`
+      : `<div class="card ip"><img src="${esc(p.img)}" alt="Zeichnung von ${esc(p.product)}"><div><b>${esc(p.product)}</b><div class="muted">von ${esc(p.name)}</div>${p.slogan ? `<div class="sl">„${esc(p.slogan)}“</div>` : ""}</div>
+        <span class="amt" id="a_${esc(p.id)}">${eur(alloc[p.id] || 0)}</span>
+        <input type="range" data-to="${esc(p.id)}" min="0" max="${d.budget}" step="${d.step}" value="${alloc[p.id] || 0}" aria-label="Investition in ${esc(p.product)}"></div>`).join("")}
+    <button id="invest" class="gold">Investition abschicken</button>
+    <div class="progress" id="progress">${v.decided} von ${v.needed} haben investiert</div>`;
+  const paintSlider = (el) => el.style.setProperty("--p", (d.budget ? el.value / d.budget * 100 : 0) + "%");
+  app.querySelectorAll("[data-to]").forEach((el) => {
+    paintSlider(el);
+    el.oninput = () => { // never more than the budget: the slider stops at what is left
+      const to = el.dataset.to, max = left() + (alloc[to] || 0);
+      alloc[to] = Math.min(+el.value, max); el.value = alloc[to]; paintSlider(el);
+      $("#a_" + CSS.escape(to)).textContent = eur(alloc[to]); $("#left").textContent = eur(left());
+    };
+  });
+  $("#invest").onclick = sendInvest;
+}
+function sendInvest() {
+  if (st?.phase !== "invest" || !st.invest.can || st.invest.sent || sendInvest.round === st.round) return;
+  sendInvest.round = st.round;
+  out({ a: "invest", alloc });
+}
 
 // ---------------------------------------------------------------- results + end
 const resultList = (list) => list.map((r, i) => `<div class="card res ${i === 0 && r.raised ? "first" : ""}" style="animation-delay:${i * .07}s"><img src="${esc(r.img)}" alt="">
@@ -479,6 +524,7 @@ setInterval(() => {
   if (s) s.textContent = Math.ceil(left / 1000) + " s";
   if (bar) { bar.firstChild.style.transform = `scaleX(${Math.min(1, left / total)})`; bar.classList.toggle("low", left < 10000); }
   if (st.phase === "develop" && st.playing && !st.submitted && left < 1500) submit();
+  if (st.phase === "invest" && left < 1500) sendInvest();
 }, 200);
 
 startScreen();
