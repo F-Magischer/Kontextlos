@@ -102,6 +102,10 @@ input#code { letter-spacing: .3em; text-transform: uppercase; }
   .guess { grid-template-columns: 1fr; }
   .start h1 { font-size: clamp(64px, 5.5vw, 88px); }
 }
+/* large monitors and TVs: scale the whole page up instead of leaving it laptop-sized in the middle */
+@media (min-width: 1500px) and (min-height: 780px) and (orientation: landscape) { .wrap { zoom: 1.2; min-height: calc(100dvh / 1.2); } }
+@media (min-width: 1800px) and (min-height: 900px) and (orientation: landscape) { .wrap { zoom: 1.4; min-height: calc(100dvh / 1.4); } }
+@media (min-width: 2300px) and (min-height: 1150px) and (orientation: landscape) { .wrap { zoom: 1.7; min-height: calc(100dvh / 1.7); } }
 
 /* reveal: yes players | counts | no players */
 .reveal { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-template-areas: "mid mid" "yes no"; align-items: start; }
