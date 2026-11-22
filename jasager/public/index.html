@@ -93,6 +93,15 @@ input#code { letter-spacing: .3em; text-transform: uppercase; }
 .done span { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 14px; background: var(--card); border: 2px solid var(--line); color: var(--soft); }
 .done span.ok { border-color: var(--yes); color: var(--ink); } .done span.ok::before { content: "✓ "; color: var(--yes); }
 .play { display: grid; gap: 16px; } .play > .stack { gap: 16px; }
+.lgrid { display: grid; gap: 16px; align-items: start; }
+/* big landscape screens (laptop, monitor, TV): use the width */
+@media (min-width: 1000px) and (orientation: landscape) {
+  .wrap { max-width: 1280px; padding-left: 32px; padding-right: 32px; }
+  .lgrid { grid-template-columns: 1.25fr 1fr; gap: 28px; }
+  .play { grid-template-columns: 1.1fr 1fr; align-items: center; align-content: center; flex: 1; gap: 32px; padding-bottom: 6vh; } .qcard { padding: 40px 28px; } .qcard h1 { font-size: clamp(40px, 3.6vw, 60px); }
+  .guess { grid-template-columns: 1fr; }
+  .start h1 { font-size: clamp(64px, 5.5vw, 88px); }
+}
 
 /* reveal: yes players | counts | no players */
 .reveal { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-template-areas: "mid mid" "yes no"; align-items: start; }
@@ -239,16 +248,16 @@ function show(d) {
 
 function lobby() {
   const d = st, on = d.players.filter((p) => p.online);
-  app.innerHTML = `<div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
+  app.innerHTML = `<div class="lgrid"><div class="stack"><div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
       <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
     <div class="stack"><span class="label">${on.length} / ${d.max} dabei</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
     ${d.vip ? `<div class="stack"><span class="label">Fragen</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div>
       <button id="start" ${on.length >= d.min ? "" : "disabled"}>${on.length >= d.min ? "Alle da – los!" : `Noch ${d.min - on.length} fehlt`}</button></div>
       ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
-      : `<div class="card"><p>${d.rounds} Fragen. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}
-    <div class="card rules stack"><h2>So geht's</h2><p>Jede Runde eine Frage für alle. Du antwortest ehrlich mit Ja oder Nein und drehst am Rad, wie viele aus der Runde Ja sagen.</p>
+      : `<div class="card"><p>${d.rounds} Fragen. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}</div>
+    <div class="stack"><div class="card rules stack"><h2>So geht's</h2><p>Jede Runde eine Frage für alle. Du antwortest ehrlich mit Ja oder Nein und drehst am Rad, wie viele aus der Runde Ja sagen.</p>
       <p><b>Genau richtig: 3 Punkte.</b> Um 1 daneben: 1 Punkt. Ab 10 Spielern zählt auch 2 daneben noch als knapp.</p></div>
-    ${PARTY ? furidaAd() : ""}`;
+    ${PARTY ? furidaAd() : ""}</div></div>`;
   $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Kopiert!"; } catch { $("#copied").textContent = d.party || d.code; } };
   $("#share").onclick = async () => {
     try { if (navigator.share) await navigator.share({ title: "JA-SAGER", text: "Spiel mit! Code " + (d.party || d.code), url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
@@ -331,9 +340,9 @@ function reveal() {
 
 function end() {
   const d = st, ranked = [...d.players].sort((a, b) => b.score - a.score);
-  app.innerHTML = `<h1>Endstand</h1><div class="rank">${ranked.map((p, i) => `<div><i>${i === 0 ? "🏆" : i + 1 + "."}</i><span style="color:${esc(p.color)}">${esc(p.name)}</span><span>${p.score} P.</span></div>`).join("")}</div>
+  app.innerHTML = `<div class="lgrid"><div class="stack"><h1>Endstand</h1><div class="rank">${ranked.map((p, i) => `<div><i>${i === 0 ? "🏆" : i + 1 + "."}</i><span style="color:${esc(p.color)}">${esc(p.name)}</span><span>${p.score} P.</span></div>`).join("")}</div></div><div class="stack" style="align-content:start">
     ${d.vip ? `<button id="again">Nochmal spielen</button>` : `<div class="nobody">${esc(d.players.find((p) => p.vip)?.name || "Der Boss")} kann eine neue Runde starten.</div>`}
-    ${PARTY ? furidaAd() : ""}`;
+    ${PARTY ? furidaAd() : ""}</div></div>`;
   if (d.vip) $("#again").onclick = () => out({ a: "restart" });
 }
 
