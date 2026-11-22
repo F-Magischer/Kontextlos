@@ -110,6 +110,28 @@ function bot() {
   const kd = (await k.next((m) => m.t === "state" && m.d.phase === "develop")).d;
   assert.ok(kd.setter && !kd.playing && kd.budget === 100, "the client only invests");
 
+  // ---- Problem: everyone writes only a problem, the next player invents the rest
+  const p = [await bot(), await bot(), await bot()];
+  p[0].say({ t: "create", name: "Pia", dev: "p0" });
+  const code3 = (await p[0].next((m) => m.t === "joined")).code;
+  p[1].say({ t: "join", code: code3, name: "Paul", dev: "p1" });
+  p[2].say({ t: "join", code: code3, name: "Pit", dev: "p2" });
+  await p[0].next((m) => m.t === "state" && m.d.players.length === 3);
+  p[0].act({ a: "settings", mode: "problem" });
+  p[0].act({ a: "start" });
+  for (const [i, w] of p.entries()) {
+    const s = (await w.next((m) => m.t === "state" && m.d.phase === "write" && m.d.write.task && !m.d.write.done)).d;
+    assert.deepStrictEqual(s.write.task.fields, ["problem"]);
+    w.act({ a: "write", problem: `Problem ${i}` });
+  }
+  for (const [i, w] of p.entries()) {
+    const b = (await w.next((m) => m.t === "state" && m.d.phase === "develop")).d.brief;
+    assert.ok(!b.what && !b.who, "only a problem");
+    assert.match(b.problem, /^Problem \d$/);
+    assert.notStrictEqual(b.problem, `Problem ${i}`, "someone else's problem");
+    assert.strictEqual(b.by.length, 1);
+  }
+
   console.log("PASS gruenderfieber: briefs, drawings, pitches, investments, results, chain and client modes");
   done(0);
 })().catch((e) => { console.error("FAIL:", e); done(1); });

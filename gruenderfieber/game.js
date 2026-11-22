@@ -2,7 +2,8 @@
 // with name and slogan, then pitches it while the others listen; after each pitch the others invest from their
 // round budget. Whoever raises the most capital over all rounds wins.
 // Modes: "zufall" the game deals the cards (optionally the same for everyone), "auftrag" one player per round writes the
-// brief for all others, "kette" every card passes through three players who each add one part, seeing the earlier ones.
+// brief for all others, "kette" every card passes through three players who each add one part, seeing the earlier ones,
+// "problem" everyone writes only a problem, the next player invents whatever solves it.
 const P = require("./prompts");
 
 const SPEED = Number(process.env.SPEED) || 1; // tests run faster
@@ -10,10 +11,11 @@ const MIN_PLAYERS = 3, MAX_PLAYERS = 12; // at least two investors per pitch; ev
 const ROUND_CHOICES = [1, 2, 3];
 const BUDGET = 100; // thousand euros per investor and round
 const STEP = 5;
-const T = { grace: 3, auftrag: 75, kette: 45, talk: 60, invest: 25, results: 25 }; // seconds
-const MODES = ["zufall", "auftrag", "kette"];
+const T = { grace: 3, auftrag: 75, kette: 45, problem: 45, talk: 60, invest: 25, results: 25 }; // seconds
+const MODES = ["zufall", "auftrag", "kette", "problem"];
 const DRAW_CHOICES = [120, 180, 240];
 const FIELDS = ["what", "who", "problem"];
+const STEPS = { kette: FIELDS, problem: ["problem"] }; // ring modes: one field per pass
 const PILE = { what: P.WHAT, who: P.WHO, problem: P.PROBLEM };
 const COLORS = ["#3DDC97", "#FFC857", "#5B8CFF", "#FF6B6B", "#C77DFF", "#00C2D1", "#FF9F43", "#7BD389", "#F368E0", "#54A0FF", "#FECA57", "#48DBFB"];
 
@@ -74,7 +76,7 @@ function task(r, id) {
   const i = w.ring.indexOf(id);
   if (i < 0) return null;
   const k = (i - w.step + w.ring.length) % w.ring.length, c = w.chains[k];
-  return { k, fields: [FIELDS[w.step]], prev: { what: c.what, who: c.who } };
+  return { k, fields: [STEPS[w.kind][w.step]], prev: { what: c.what, who: c.who } };
 }
 const push = (r) => r.order.forEach((id) => send(r.players.get(id).ws, { t: "state", d: view(r, id) }));
 function later(r, sec, f) { clearTimeout(r.timer); r.timer = setTimeout(f, (sec * 1000) / SPEED); r.deadline = Date.now() + (sec * 1000) / SPEED; }
@@ -109,9 +111,9 @@ function startRound(r) {
   if (r.mode === "auftrag") { // the client rotates every round
     r.setter = ids[(r.round - 1) % ids.length];
     r.write = { kind: "auftrag", setter: r.setter, step: 0, done: new Set(), parts: {} };
-  } else if (r.mode === "kette") {
+  } else if (STEPS[r.mode]) {
     const ring = shuffle([...ids]);
-    r.write = { kind: "kette", ring, step: 0, done: new Set(), chains: ring.map(() => ({ by: [] })) };
+    r.write = { kind: r.mode, ring, step: 0, done: new Set(), chains: ring.map(() => ({ by: [] })) };
   }
   if (r.write) { r.phase = "write"; later(r, T[r.write.kind], () => endWrite(r)); return push(r); }
   const shared = r.same ? brief() : null;
@@ -135,11 +137,12 @@ function endWrite(r) {
     online(r).filter((id) => id !== w.setter).forEach((id) => r.briefs.set(id, { ...b }));
     return develop(r);
   }
-  w.chains.forEach((c) => fill(c, FIELDS[w.step]));
-  if (w.step < 2) { w.step++; w.done = new Set(); later(r, T.kette, () => endWrite(r)); return push(r); }
-  // every card goes to the player after the three who wrote it
+  const steps = STEPS[w.kind];
+  w.chains.forEach((c) => fill(c, steps[w.step]));
+  if (w.step < steps.length - 1) { w.step++; w.done = new Set(); later(r, T[w.kind], () => endWrite(r)); return push(r); }
+  // every card goes to the player after the ones who wrote it
   w.chains.forEach((c, k) => {
-    const dev = w.ring[(k + 3) % w.ring.length];
+    const dev = w.ring[(k + steps.length) % w.ring.length];
     if (r.players.get(dev).online) r.briefs.set(dev, { what: c.what, who: c.who, problem: c.problem, by: c.by });
   });
   develop(r);
@@ -217,7 +220,7 @@ function onPlayer(r, id, d) {
     const t = task(r, id), w = r.write, name = r.players.get(id).name;
     const target = w.kind === "auftrag" ? w.parts : w.chains[t.k];
     t.fields.forEach((f) => { const v = clean(d[f], 60); if (v) target[f] = v; });
-    if (w.kind === "kette") target.by.push(name);
+    if (w.kind !== "auftrag") target.by.push(name);
     w.done.add(id);
     push(r); check(r);
   } else if (d.a === "reroll" && r.mode === "zufall" && !r.same && r.phase === "develop" && r.briefs.has(id) && !r.briefs.get(id).rerolled && !r.ideas.has(id)) {
