@@ -43,6 +43,8 @@ services:
         sync: false
       - key: GRUENDERFIEBER_KEY
         sync: false
+      - key: ECHTODERGTA_KEY
+        sync: false
       - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
         sync: false
       - key: DATA_PASSWORD # for /data
@@ -86,6 +88,27 @@ services:
       - key: PUBLIC_URL
         value: https://gruenderfieber.furida.workers.dev
       - key: PARTY_KEY # same value as GRUENDERFIEBER_KEY on furida-party
+        sync: false
+      - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
+        sync: false
+
+  # ECHT ODER GTA? (echtodergta/), a fourth FURIDA game; also playable solo
+  - type: web
+    name: echtodergta
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd echtodergta && npm ci
+    startCommand: cd echtodergta && npm start
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["echtodergta/**"]
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PUBLIC_URL
+        value: https://echtodergta.furida.workers.dev
+      - key: PARTY_KEY # same value as ECHTODERGTA_KEY on furida-party
         sync: false
       - key: DATABASE_URL # play data (Neon Postgres), the same database for all services
         sync: false

@@ -1,5 +1,6 @@
 // Party-enabled games. url: where players go (a *.furida.workers.dev worker, so it is same-site with the party).
-// api: where this service calls the game backend (direct, skips the worker). key: shared secret for prepare/redeem.
+// api: where this service calls the game backend: always the bare Render address (a Worker in between never wakes a
+// sleeping server, Render answers it with 502). Players also get it to wake a server by hand. key: shared secret for prepare/redeem.
 // art: wallpaper in public/games/, shown in the hub's library.
 module.exports = [
   {
@@ -13,7 +14,7 @@ module.exports = [
     art: "/games/kontextlos.svg",
     max: 20,
     url: process.env.KONTEXTLOS_URL || "https://kontextlos.furida.workers.dev",
-    api: process.env.KONTEXTLOS_API || process.env.KONTEXTLOS_URL || "https://kontextlos.onrender.com",
+    api: process.env.KONTEXTLOS_API || "https://kontextlos.onrender.com",
     key: process.env.KONTEXTLOS_KEY,
   },
   {
@@ -27,7 +28,7 @@ module.exports = [
     art: "/games/jasager.svg",
     max: 20,
     url: process.env.JASAGER_URL || "https://jasager.furida.workers.dev",
-    api: process.env.JASAGER_API || process.env.JASAGER_URL || "https://jasager.onrender.com",
+    api: process.env.JASAGER_API || "https://jasager.onrender.com",
     key: process.env.JASAGER_KEY,
   },
   {
@@ -41,7 +42,21 @@ module.exports = [
     art: "/games/gruenderfieber.svg",
     max: 12,
     url: process.env.GRUENDERFIEBER_URL || "https://gruenderfieber.furida.workers.dev",
-    api: process.env.GRUENDERFIEBER_API || process.env.GRUENDERFIEBER_URL || "https://gruenderfieber.onrender.com",
+    api: process.env.GRUENDERFIEBER_API || "https://gruenderfieber.onrender.com",
     key: process.env.GRUENDERFIEBER_KEY,
+  },
+  {
+    id: "echtodergta",
+    name: "ECHT ODER GTA?",
+    tag: "Florida in echt – oder ein Screenshot aus GTA VI?",
+    desc: "Sumpf, Strand, Skyline, Highway: Bei jedem Bild ratet ihr, ob es ein echtes Foto aus Florida ist oder aus GTA VI stammt. Oder vier Bilder, eins ist GTA – findet es. Schnell und richtig gibt die meisten Punkte. Auch alleine spielbar.",
+    players: "1–20",
+    time: "5–10 Min.",
+    tags: ["Party", "Raten", "Bilder"],
+    art: "/games/echtodergta.svg",
+    max: 20,
+    url: process.env.ECHTODERGTA_URL || "https://echtodergta.furida.workers.dev",
+    api: process.env.ECHTODERGTA_API || "https://echtodergta.onrender.com",
+    key: process.env.ECHTODERGTA_KEY,
   },
 ];

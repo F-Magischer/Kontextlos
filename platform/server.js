@@ -72,7 +72,7 @@ function view(pl) {
   return {
     t: "state",
     me: { id: pl.id, name: pl.name },
-    games: GAMES.map((g) => ({ id: g.id, name: g.name, tag: g.tag, desc: g.desc, players: g.players, time: g.time, tags: g.tags, art: g.art, url: g.url, max: g.max, down: (down.get(g.id) || 0) > now })),
+    games: GAMES.map((g) => ({ id: g.id, name: g.name, tag: g.tag, desc: g.desc, players: g.players, time: g.time, tags: g.tags, art: g.art, url: g.url, server: g.api, max: g.max, down: (down.get(g.id) || 0) > now })),
     party: pa && {
       code: pa.code, leader: pa.leader, anyone: pa.anyone, secs: pa.secs, busy: pa.busy, last: pa.last,
       wake: pa.wake ? Math.round((now - pa.wake) / SEC) : null, // seconds the game server has been starting up
@@ -174,7 +174,7 @@ async function transition(pa, id, byVote = false) {
     pa.busy = null;
     if (!parties.has(pa.code)) return;
     broadcast(pa);
-    return tell(pa, `${g.name} ließ sich gerade nicht starten. Ihr bleibt, wo ihr seid – versucht es gleich nochmal.`);
+    return tell(pa, `${g.name} ließ sich gerade nicht starten. Ihr bleibt, wo ihr seid. Tipp: In der Bibliothek bei ${g.name} „Server öffnen“ antippen, kurz warten, dann nochmal.`);
   }
   pa.busy = null;
   if (!parties.has(pa.code)) return;

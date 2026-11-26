@@ -3,7 +3,7 @@
 // While the free Render server sleeps, pages get our own loading screen (instead of Render's 502) that reloads once it is up.
 // Render does not wake a sleeping service for requests that come from a Worker (it answers 502 at once), so the loading
 // page's browser pings the onrender address directly; that wakes it.
-const NAMES = { kontextlos: "KONTEXTLOS", jasager: "JA-SAGER", gruenderfieber: "GRÜNDERFIEBER", play: "FURIDA" };
+const NAMES = { kontextlos: "KONTEXTLOS", jasager: "JA-SAGER", gruenderfieber: "GRÜNDERFIEBER", echtodergta: "ECHT ODER GTA?", play: "FURIDA" };
 let awakeUntil = 0; // per worker instance: after a good answer, skip the check for a minute
 
 export default {

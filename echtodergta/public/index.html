@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#140A24">
+<title>ECHT ODER GTA?</title>
+<meta name="description" content="Florida in echt oder Leonida aus GTA VI? Rate, was du siehst – alleine oder mit Freunden.">
+<link rel="preload" href="fonts/BricolageGrotesque.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+@font-face { font-family: "Brico"; src: url("fonts/BricolageGrotesque.ttf"); font-weight: 200 800; font-stretch: 75% 100%; font-display: swap; }
+/* Florida at dusk: deep purple night, hot pink and orange sunset, teal water */
+:root { --bg: #140A24; --bg2: #1F0F36; --card: #22113D; --card2: #2C1850; --line: rgba(255,244,248,.13); --text: #FFF4F8; --muted: #C9B3D9;
+  --pink: #FF4FA3; --orange: #FF9F45; --teal: #2EE6D6; --sun: #FFE45C; --ok: #3BE38A; --bad: #FF5470; }
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--bg); color: var(--text); }
+body { min-height: 100dvh; font: 17px/1.4 "Brico", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
+  background-image: radial-gradient(90% 55% at 50% 112%, rgba(255,159,69,.55), rgba(255,79,163,.28) 45%, transparent 75%), radial-gradient(60% 40% at 100% 0%, rgba(46,230,214,.16), transparent 70%);
+  background-attachment: fixed; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 16px 32px; min-height: 100dvh; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 14px; }
+.logo { font-weight: 800; font-size: 22px; letter-spacing: -.01em; color: var(--text); text-decoration: none; display: inline-flex; align-items: baseline; gap: 6px; font-stretch: 85%; }
+.logo .e { color: var(--teal); } .logo .o { font-size: 13px; letter-spacing: .14em; color: var(--muted); } .logo .g { color: var(--pink); }
+.hr { display: flex; gap: 8px; align-items: center; }
+.who { display: flex; gap: 6px; align-items: center; font-weight: 800; font-size: 13px; }
+.who .code { border: 1px solid var(--line); background: var(--card); padding: 3px 8px; border-radius: 8px; letter-spacing: .12em; }
+.who b { background: var(--me, var(--pink)); color: var(--bg); padding: 3px 9px; border-radius: 8px; }
+main { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+h1 { font-size: clamp(34px, 8vw, 64px); line-height: .98; letter-spacing: -.035em; font-weight: 800; font-stretch: 85%; }
+h2 { font-size: 24px; letter-spacing: -.02em; font-weight: 800; }
+.label { font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
+.stack { display: grid; gap: 12px; }
+button, .btn { font: 800 19px "Brico", system-ui, sans-serif; color: var(--bg); background: var(--text); border: 0; border-radius: 16px; padding: 14px 18px;
+  cursor: pointer; transition: transform .08s, filter .15s; text-align: center; text-decoration: none; display: block; width: 100%; }
+button:active { transform: scale(.97); } button:disabled { opacity: .35; cursor: default; transform: none; }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+button.small { font-size: 15px; padding: 8px 12px; width: auto; }
+button.pink { background: linear-gradient(100deg, var(--pink), var(--orange)); color: #fff; }
+input { width: 100%; font: 700 19px "Brico", sans-serif; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; outline: none; }
+input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(46,230,214,.25); }
+input#code { letter-spacing: .3em; text-transform: uppercase; }
+.err { background: var(--bad); color: #fff; border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 800; font-size: 13px; } .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.seg { display: flex; gap: 8px; } .seg button { flex: 1; font-size: 16px; padding: 10px 8px; background: var(--bg2); color: var(--text); border: 1px solid var(--line); }
+.seg button.on { background: var(--teal); color: var(--bg); border-color: var(--teal); }
+.seg button small { display: block; font-size: 12px; font-weight: 600; opacity: .75; }
+
+/* start */
+.start { display: grid; gap: 18px; }
+.hero { display: grid; gap: 12px; }
+.hero h1 .e { color: var(--teal); } .hero h1 .g { background: linear-gradient(100deg, var(--pink), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.teaser { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.teaser div { aspect-ratio: 16 / 10; border-radius: 14px; background: var(--card2) center / cover; position: relative; overflow: hidden; }
+.teaser div span { position: absolute; left: 8px; bottom: 8px; font-weight: 800; font-size: 13px; background: rgba(20,10,36,.75); padding: 3px 9px; border-radius: 99px; }
+.choose { display: grid; gap: 14px; }
+.choose { align-items: start; }
+@media (min-width: 760px) { .choose { grid-template-columns: 1fr 1fr; } }
+.fine { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.fine a { color: inherit; }
+
+/* lobby */
+.joinbox { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; background: linear-gradient(135deg, rgba(255,79,163,.35), rgba(255,159,69,.25)), var(--card); }
+.bigcode { font-size: 40px; letter-spacing: .14em; width: auto; display: inline-block; padding: 6px 14px; margin: 6px 0; }
+.qr { width: 132px; height: 132px; border-radius: 14px; background: #fff; display: block; image-rendering: pixelated; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { color: var(--bg); font-weight: 800; padding: 6px 12px; border-radius: 12px; }
+.chip small { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .75; }
+.chip.off { opacity: .4; }
+.mrow { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); } .mrow b { flex: 1; }
+.lgrid { display: grid; gap: 16px; align-items: start; }
+
+/* round */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 800; }
+.tbar { height: 8px; border-radius: 99px; background: var(--bg2); overflow: hidden; }
+.tbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--teal), var(--pink)); transform-origin: left; }
+.tbar.low i { background: var(--bad); }
+.play { display: grid; gap: 14px; }
+.pic { position: relative; border-radius: 18px; overflow: hidden; background: var(--card2); aspect-ratio: 16 / 9; }
+.pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.pic .tag { position: absolute; left: 10px; top: 10px; font-weight: 800; font-size: 15px; padding: 5px 12px; border-radius: 99px; color: #fff; animation: pop .45s cubic-bezier(.2,1.5,.4,1) both; }
+.tag.gta { background: var(--pink); } .tag.real { background: var(--ok); color: var(--bg); }
+.pic .num { position: absolute; left: 8px; top: 8px; font-weight: 800; font-size: 14px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: rgba(20,10,36,.7); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tiles .pic { cursor: pointer; border: 3px solid transparent; padding: 0; width: 100%; }
+.tiles .pic.sel { border-color: var(--sun); box-shadow: 0 0 0 3px rgba(255,228,92,.35); }
+.tiles .pic.win { border-color: var(--pink); }
+.tiles .pic.dim img { filter: saturate(.6) brightness(.6); }
+/* phones upright: taller tiles fill the screen (crops the sides; the zoom button shows the whole picture) */
+@media (max-width: 600px) and (orientation: portrait) { .tiles .pic { aspect-ratio: 4 / 5; } }
+.zoom { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; padding: 0; border-radius: 10px; background: rgba(20,10,36,.7); color: #fff; font-size: 18px; line-height: 1; }
+.answer { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.answer button { font-size: 26px; padding: 18px 10px; letter-spacing: .02em; }
+.answer .real { background: var(--teal); color: var(--bg); } .answer .gta { background: linear-gradient(100deg, var(--pink), var(--orange)); color: #fff; }
+.answer small { display: block; font-size: 13px; font-weight: 700; opacity: .75; letter-spacing: 0; }
+.wait { text-align: center; display: grid; gap: 8px; }
+.done span { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 14px; background: var(--bg2); color: var(--muted); }
+.done span.ok { color: var(--text); } .done span.ok::before { content: "✓ "; color: var(--ok); }
+.verdict { text-align: center; font-weight: 800; font-size: 26px; padding: 14px; border-radius: 18px; animation: pop .45s cubic-bezier(.2,1.5,.4,1) both; }
+.verdict.yes { background: var(--ok); color: var(--bg); } .verdict.no { background: var(--bad); color: #fff; } .verdict.none { background: var(--card2); }
+.verdict small { display: block; font-size: 15px; font-weight: 700; opacity: .8; }
+.credit { font-size: 12px; color: var(--muted); } .credit a { color: inherit; }
+.board { display: grid; gap: 6px; }
+.board div { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; background: var(--bg2); border-radius: 12px; padding: 8px 12px; font-weight: 800; animation: rise .35s both; }
+.board .g { font-size: 14px; } .board .g.r { color: var(--ok); } .board .g.w { color: var(--bad); }
+.rank { display: grid; gap: 8px; }
+.rank div { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.rank div:first-child { background: linear-gradient(100deg, rgba(255,79,163,.45), rgba(255,159,69,.35)); font-size: 20px; }
+.big { font-size: clamp(48px, 12vw, 88px); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.lightbox { position: fixed; inset: 0; z-index: 80; background: rgba(8,4,16,.94); display: grid; place-items: center; padding: 12px; }
+.lightbox[hidden] { display: none; } .lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+@keyframes rise { from { transform: translateY(10px); opacity: 0; } }
+
+/* party: FURIDA button only in the lobby, quit dialog, party page iframe */
+.modal { position: fixed; inset: 0; z-index: 60; background: rgba(8,4,16,.7); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.modal[hidden], .quit[hidden], .pbtn[hidden] { display: none; }
+.modal .card { max-width: 420px; width: 100%; display: grid; gap: 10px; animation: pop .3s cubic-bezier(.2,1.4,.4,1) both; }
+.quit { width: auto; padding: 5px 7px; line-height: 0; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+.pbtn { width: auto; padding: 4px 10px; font-size: 14px; letter-spacing: .08em; border-radius: 10px; background: linear-gradient(100deg, #7C5CFF, #22D3EE); color: #fff; position: relative; }
+.pbtn.away::after { content: "!"; position: absolute; top: -8px; right: -8px; background: var(--sun); color: var(--bg); border-radius: 8px; font-size: 12px; line-height: 1; padding: 2px 5px; }
+body:not(.lobby):not(.home) .pbtn { display: none; }
+@media (max-width: 460px) { body.inparty .who { display: none; } }
+iframe.party { position: fixed; left: 0; top: 0; border: 0; z-index: 70; width: 0; height: 0; visibility: hidden; }
+iframe.party.open { width: 100%; height: 100%; visibility: visible; }
+.furida-ad { display: grid; gap: 4px; padding: 18px 20px; border-radius: 20px; color: #EEF0FF; text-decoration: none;
+  background: radial-gradient(120% 140% at 0% 0%, #7C5CFF 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, #22D3EE 0%, transparent 50%), #0E0F1A; box-shadow: 0 14px 40px -16px rgba(124,92,255,.8); }
+.furida-ad .fa-brand { font-weight: 800; font-size: 13px; letter-spacing: .22em; opacity: .85; }
+.furida-ad b { font-size: 22px; line-height: 1.1; } .furida-ad small { font-size: 15px; opacity: .8; }
+.furida-ad .fa-go { margin-top: 8px; font-weight: 800; font-size: 15px; justify-self: start; background: #fff; color: #0E0F1A; padding: 7px 14px; border-radius: 999px; }
+
+/* sideways phones: picture left, answer right */
+@media (orientation: landscape) and (max-height: 560px) {
+  .wrap { padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); }
+  header { padding-bottom: 8px; } main { gap: 10px; }
+  .play { grid-template-columns: 1.5fr 1fr; align-items: center; }
+  .play .pic { max-height: calc(100dvh - 110px); }
+  .tiles { max-height: calc(100dvh - 110px); aspect-ratio: 16 / 9; }
+  .answer { grid-template-columns: 1fr; } .answer button { font-size: 22px; padding: 12px; }
+  .lgrid { grid-template-columns: 1.2fr 1fr; }
+}
+/* laptops, monitors, TVs: wide two-column layout, scaled up on big screens */
+@media (min-width: 1000px) and (orientation: landscape) {
+  .wrap { max-width: 1280px; padding-left: 32px; padding-right: 32px; }
+  .lgrid { grid-template-columns: 1.25fr 1fr; gap: 28px; }
+  .play { grid-template-columns: 1.7fr 1fr; align-items: center; gap: 28px; flex: 1; align-content: center; }
+  .start { grid-template-columns: 1fr 1fr; align-items: center; gap: 36px; flex: 1; }
+  .choose { grid-template-columns: 1fr; }
+}
+@media (min-width: 1500px) and (min-height: 780px) and (orientation: landscape) { .wrap { zoom: 1.2; min-height: calc(100dvh / 1.2); } }
+@media (min-width: 1800px) and (min-height: 900px) and (orientation: landscape) { .wrap { zoom: 1.4; min-height: calc(100dvh / 1.4); } }
+@media (min-width: 2300px) and (min-height: 1150px) and (orientation: landscape) { .wrap { zoom: 1.7; min-height: calc(100dvh / 1.7); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="logo" href="/" title="Zur Startseite"><span class="e">ECHT</span><span class="o">ODER</span><span class="g">GTA?</span></a><div class="hr">
+<button id="partyBtn" class="pbtn" hidden title="Party öffnen">FURIDA</button><div class="who" id="who"></div>
+<button id="quit" class="quit" hidden title="Party verlassen" aria-label="Party verlassen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M14 4H5v16h9M10 12h11M17 8l4 4-4 4"/></svg></button></div></header>
+<main id="app"></main>
+</div>
+<div id="quitbox" class="modal" hidden><div class="card"><h2>Party verlassen?</h2><p class="muted">Du verlässt die Party und gehst zurück zur Lobby.</p>
+<button id="quitYes">Ja, verlassen</button><button id="quitNo" class="ghost">Nein, zurück</button></div></div>
+<div id="lightbox" class="lightbox" hidden><img alt=""></div>
+<script>
+// the bare Render address is another site: no party, no FURIDA. Always use the public one.
+if (location.hostname.endsWith(".onrender.com")) location.replace("https://echtodergta.furida.workers.dev" + location.pathname + location.search + location.hash);
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+// FURIDA party overlay: only on the platform domain (local tests: localStorage eg_party = "http://localhost:8090")
+const PARTY = location.hostname.endsWith(".furida.workers.dev") ? "https://play.furida.workers.dev" : store.get("eg_party");
+const furidaAd = () => `<a class="furida-ad" id="furidaAd" href="${PARTY}/" target="_top"><span class="fa-brand">FURIDA</span>
+  <b>Mehr Multiplayer-Spiele für eure Runde</b><small>Eure Party bleibt zusammen – das nächste Spiel wählt ihr per Abstimmung.</small><span class="fa-go">Spiele entdecken →</span></a>`;
+const devId = () => { let d = store.get("eg_dev"); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set("eg_dev", d); } return d; };
+const MODES = { eins: ["Ein Bild", "Echt oder GTA?"], mehrere: ["Vier Bilder", "Welches ist GTA?"] };
+const FINE = `<p class="fine">Fanprojekt, nicht mit Rockstar Games verbunden. GTA-VI-Screenshots © Rockstar Games, geladen von <a href="https://www.rockstargames.com/VI/media/screenshots" target="_blank" rel="noopener">rockstargames.com</a>.
+  Die echten Fotos stammen aus Florida, von Wikimedia Commons unter freien Lizenzen – Urheber und Lizenz stehen bei der Auflösung.</p>`;
+let ws, me = null, joining = false, st = null, shown = "", ends = 0, sel = null, partyCode = null, solo = null;
+
+// ---------------------------------------------------------------- connection (rooms)
+function connect(code, name, create = false, party = null) {
+  joining = true; solo = null;
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+  ws.onopen = () => ws.send(JSON.stringify(party ? { t: "join", party } : create ? { t: "create", name, dev: devId() } : { t: "join", code, name, dev: devId(), pid: store.get("eg_pid_" + code) }));
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === "joined" || m.t === "error") joining = false;
+    if (m.t === "joined") {
+      if (window.EG_BUILD && m.build !== window.EG_BUILD) return location.reload(); // new version deployed: load it
+      window.EG_BUILD = m.build;
+      me = m; store.set("eg_pid_" + m.code, m.id); store.set("eg_name", m.name);
+      history.replaceState(null, "", "?code=" + m.code);
+    }
+    else if (m.t === "error") { me = null; startScreen(m.msg); usePartyCode(); }
+    else if (m.t === "party" && /^https?:\/\//.test(m.url)) location.href = m.url; // a party plays here: join it first
+    else if (m.t === "state") show(m.d);
+  };
+  ws.onclose = () => { if (me) setTimeout(() => connect(me.code, me.name), 1500); };
+}
+// one way to act, for rooms (server) and solo (this page)
+const act = (d) => solo ? soloAct(d) : ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: "msg", d }));
+
+// ---------------------------------------------------------------- start
+let pics = null; // the picture list, for the teaser and solo games
+const getPics = async () => pics || (pics = await (await fetch("/api/pics")).json());
+
+function startScreen(err) {
+  shown = ""; st = null; solo = null; document.body.classList.remove("lobby"); document.body.classList.add("home");
+  $("#who").innerHTML = "";
+  const code0 = new URLSearchParams(location.search).get("code") || "";
+  const best = (m) => +store.get("eg_best_" + m) || 0;
+  app.innerHTML = `<div class="start">
+    <div class="hero"><span class="label">Bilderrätsel · alleine oder 1–20 Leute</span><h1><span class="e">Echt</span> oder <span class="g">GTA?</span></h1>
+      <p class="muted">Florida in echt – oder Leonida aus GTA VI? Sumpf, Strand, Skyline, Highway: Rate bei jedem Bild, ob es ein echtes Foto ist oder ein Screenshot aus dem Spiel. Schneller richtig gibt mehr Punkte.</p>
+      <div class="teaser" id="teaser"><div><span>Echt?</span></div><div><span>GTA?</span></div></div></div>
+    <div class="choose">
+      <div class="card stack"><span class="label">Alleine spielen</span>
+        <div class="seg" id="soloMode">${Object.entries(MODES).map(([k, m], i) => `<button data-solo="${k}" class="${(store.get("eg_mode") || "eins") === k ? "on" : ""}">${m[0]}<small>${m[1]}${best(k) ? ` · Rekord ${best(k)}` : ""}</small></button>`).join("")}</div>
+        <button id="solo" class="pink">10 Bilder – los!</button></div>
+      <div class="card stack">${err ? `<div class="err">${esc(err)}</div>` : ""}<span class="label">Mit Freunden</span>
+        <div><label class="label" for="name">Dein Name</label><input id="name" maxlength="12" autocomplete="nickname" value="${esc(store.get("eg_name") || "")}"></div>
+        <div><label class="label" for="code">Raumcode</label><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" value="${esc(code0)}"></div>
+        <button id="go">Mitspielen</button><div class="or">oder</div><button id="new" class="ghost">Neuen Raum erstellen</button></div>
+    </div></div>
+    ${PARTY ? furidaAd() : ""}${FINE}`;
+  app.querySelectorAll("[data-solo]").forEach((b) => b.onclick = () => { store.set("eg_mode", b.dataset.solo); app.querySelectorAll("[data-solo]").forEach((x) => x.classList.toggle("on", x === b)); });
+  $("#solo").onclick = () => startSolo(store.get("eg_mode") || "eins");
+  $("#go").onclick = () => {
+    const code = $("#code").value.trim().toUpperCase(), name = $("#name").value.trim();
+    if (!name) return startScreen("Erst deinen Namen eingeben.");
+    if (code.length !== 4) return startScreen("Der Raumcode hat 4 Buchstaben. Neuer Raum? Dann unten erstellen.");
+    $("#go").disabled = true; connect(code, name);
+  };
+  $("#new").onclick = () => { const name = $("#name").value.trim(); if (!name) return startScreen("Erst deinen Namen eingeben."); $("#new").disabled = true; connect("", name, true); };
+  for (const id of ["name", "code"]) $("#" + id).onkeydown = (e) => { if (e.key === "Enter") $("#go").click(); };
+  // two random pictures as a teaser, one of each – without saying which is which
+  getPics().then((p) => { const el = $("#teaser"); if (!el || !p.gta.length) return; const two = [p.real[Math.random() * p.real.length | 0], p.gta[Math.random() * p.gta.length | 0]].sort(() => Math.random() - .5);
+    [...el.children].forEach((d, i) => { d.style.backgroundImage = `url("${two[i].src}")`; d.firstChild.textContent = "Echt oder GTA?"; }); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- screens (the same for rooms and solo)
+const player = (id) => st.players.find((p) => p.id === id);
+function show(d) {
+  st = d;
+  ends = Date.now() + d.left;
+  document.body.classList.toggle("lobby", d.phase === "lobby"); document.body.classList.remove("home");
+  const you = player(d.you);
+  if (you && !solo) { document.documentElement.style.setProperty("--me", you.color); $("#who").innerHTML = `<span class="code">${esc(d.party || d.code)}</span><b>${esc(you.name)}</b>`; }
+  if (solo) $("#who").innerHTML = `<b>Solo</b>`;
+  // a round is drawn once (and again after answering), so the pictures don't flicker
+  const key = d.phase === "ask" ? `ask:${d.round}:${d.mine !== null}:${d.playing}` : d.phase === "reveal" ? `reveal:${d.round}` : d.phase + ":" + JSON.stringify(d.players) + d.rounds + d.mode + d.vip;
+  if (key === shown) return update();
+  shown = key;
+  ({ lobby, ask, reveal, end })[d.phase]();
+}
+function update() { const el = $("#done"); if (el && st.phase === "ask") el.innerHTML = doneList(); }
+const doneList = () => solo ? "" : `<div class="done">${st.players.filter((p) => p.online || p.done).map((p) => `<span class="${p.done ? "ok" : ""}">${esc(p.name)}</span>`).join("")}</div>`;
+const head = (what) => `<div class="top"><span>Runde ${st.round} / ${st.rounds}${what ? " · " + what : ""}</span><span id="secs"></span></div><div class="tbar" id="tbar"><i></i></div>`;
+
+function lobby() {
+  const d = st, on = d.players.filter((p) => p.online);
+  app.innerHTML = `<div class="lgrid"><div class="stack"><div class="card joinbox"><div><span class="label">${d.party ? "Party-Code" : "Raumcode"}</span><br><button class="bigcode" id="copy">${esc(d.party || d.code)}</button><br><span class="label" id="copied">Antippen zum Kopieren</span></div>
+      <div class="stack"><img class="qr" src="/qr/${esc(d.code)}.png" alt="QR-Code zum Beitreten"><button class="small" id="share">Link teilen</button></div></div>
+    <div class="stack"><span class="label">${on.length} / ${d.max} dabei</span><div class="chips">${d.players.map((p) => `<span class="chip ${p.online ? "" : "off"}" style="background:${esc(p.color)}"><small>${p.vip ? "Boss" : "dabei"}</small>${esc(p.name)}</span>`).join("")}</div></div>
+    ${d.vip ? `<div class="card stack"><span class="label">Modus</span><div class="seg">${Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" class="${k === d.mode ? "on" : ""}">${m[0]}<small>${m[1]}</small></button>`).join("")}</div>
+      <span class="label">Runden</span><div class="seg">${d.roundChoices.map((n) => `<button data-rounds="${n}" class="${n === d.rounds ? "on" : ""}">${n}</button>`).join("")}</div></div>
+      <button id="start" class="pink">Los geht's!</button>
+      ${d.players.length > 1 ? `<div class="stack"><span class="label">Spieler verwalten</span>${d.players.filter((p) => p.id !== d.you).map((p) => `<div class="mrow"><b style="color:${esc(p.color)}">${esc(p.name)}</b><button class="small ghost" data-kick="${esc(p.id)}">Kicken</button></div>`).join("")}</div>` : ""}`
+      : `<div class="card"><p>${MODES[d.mode][0]} · ${d.rounds} Runden. <b>${esc(d.players.find((p) => p.vip)?.name || "Der Boss")}</b> startet das Spiel.</p></div>`}</div>
+    <div class="stack"><div class="card stack"><h2>So geht's</h2>
+      <p class="muted"><b>Ein Bild:</b> Ist das ein echtes Foto aus Florida oder ein Screenshot aus GTA VI? Tippe auf Echt oder GTA.</p>
+      <p class="muted"><b>Vier Bilder:</b> Drei sind echt, eins ist aus GTA. Finde es.</p>
+      <p class="muted">Richtig: 100 Punkte, plus bis zu 50 fürs Tempo.</p></div>
+    ${PARTY ? furidaAd() : ""}${FINE}</div></div>`;
+  $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(d.party || d.code); $("#copied").textContent = "Kopiert!"; } catch { $("#copied").textContent = d.party || d.code; } };
+  $("#share").onclick = async () => {
+    try { if (navigator.share) await navigator.share({ title: "ECHT ODER GTA?", text: "Spiel mit! Code " + (d.party || d.code), url: d.link }); else { await navigator.clipboard.writeText(d.link); $("#share").textContent = "Link kopiert!"; } }
+    catch (e) { if (e.name !== "AbortError") $("#share").textContent = d.link; }
+  };
+  if (d.vip) {
+    $("#start").onclick = () => act({ a: "start" });
+    app.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => act({ a: "settings", mode: b.dataset.mode }));
+    app.querySelectorAll("[data-rounds]").forEach((b) => b.onclick = () => act({ a: "settings", rounds: +b.dataset.rounds }));
+    app.querySelectorAll("[data-kick]").forEach((b) => b.onclick = () => act({ a: "kick", id: b.dataset.kick }));
+  }
+}
+
+const img = (p, i) => `<img src="${esc(p.src)}" alt="${st.q.mode === "eins" ? "Echt oder GTA?" : "Bild " + (i + 1)}" draggable="false">`;
+function ask() {
+  const d = st, q = d.q, answered = d.mine !== null;
+  sel = null;
+  let pic, ctl;
+  if (q.mode === "eins") {
+    pic = `<div class="pic">${img(q.pics[0], 0)}<button class="zoom" data-zoom="0" aria-label="Groß ansehen">⤢</button></div>`;
+    ctl = answered ? waitBox(d.mine === "gta" ? "GTA" : "Echt") : !d.playing ? waitBox() :
+      `<div class="answer"><button class="real" data-pick="real">ECHT<small>Foto aus Florida</small></button><button class="gta" data-pick="gta">GTA<small>Screenshot</small></button></div>`;
+  } else {
+    pic = `<div class="tiles">${q.pics.map((p, i) => `<div class="pic ${answered && d.mine === i ? "sel" : ""}" data-tile="${i}" role="button" tabindex="0" aria-label="Bild ${i + 1}">${img(p, i)}<span class="num">${i + 1}</span><button class="zoom" data-zoom="${i}" aria-label="Bild ${i + 1} groß ansehen">⤢</button></div>`).join("")}</div>`;
+    ctl = answered ? waitBox("Bild " + (d.mine + 1)) : !d.playing ? waitBox() :
+      `<div class="stack"><p class="muted">Drei Bilder sind echt, eins ist aus GTA VI. Tippe es an.</p><button id="lock" class="pink" disabled>Das ist GTA!</button></div>`;
+  }
+  app.innerHTML = head(MODES[q.mode][1]) + `<div class="play">${pic}<div class="stack">${ctl}<div id="done">${doneList()}</div></div></div>`;
+  app.querySelectorAll("[data-zoom]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); zoom(q.pics[+b.dataset.zoom].src); });
+  if (answered || !d.playing) return;
+  app.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => { app.querySelectorAll("[data-pick]").forEach((x) => x.disabled = true); act({ a: "answer", pick: b.dataset.pick }); });
+  app.querySelectorAll("[data-tile]").forEach((t) => {
+    t.onclick = () => { sel = +t.dataset.tile; app.querySelectorAll("[data-tile]").forEach((x) => x.classList.toggle("sel", x === t)); $("#lock").disabled = false; };
+    t.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); t.click(); } };
+  });
+  if ($("#lock")) $("#lock").onclick = () => { if (sel === null) return; $("#lock").disabled = true; act({ a: "answer", pick: sel }); };
+}
+const waitBox = (mine) => `<div class="card wait">${mine ? `<span class="label">Deine Antwort</span><h2>${esc(mine)}</h2><p class="muted">${solo ? "" : "Warte auf die anderen …"}</p>` : `<h2>Gleich bist du dabei.</h2><p class="muted">Ab der nächsten Runde spielst du mit.</p>`}</div>`;
+function zoom(src) { const b = $("#lightbox"); b.firstChild.src = src; b.hidden = false; }
+$("#lightbox").onclick = () => { $("#lightbox").hidden = true; };
+
+function reveal() {
+  const d = st, q = d.q, r = d.result, mine = r.picks[d.you];
+  const credit = (p) => `<a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.credit)}</a>`;
+  let pic;
+  if (q.mode === "eins") {
+    const p = q.pics[0];
+    pic = `<div class="pic">${img(p, 0)}<span class="tag ${p.kind}">${p.kind === "gta" ? "GTA VI · " + esc(p.where) : "Echt · Florida"}</span><button class="zoom" data-zoom="0" aria-label="Groß ansehen">⤢</button></div>`;
+  } else {
+    pic = `<div class="tiles">${q.pics.map((p, i) => `<div class="pic ${i === q.answer ? "win" : "dim"}">${img(p, i)}<span class="tag ${p.kind}">${p.kind === "gta" ? "GTA" : "Echt"}</span><button class="zoom" data-zoom="${i}" aria-label="Bild ${i + 1} groß ansehen">⤢</button></div>`).join("")}</div>`;
+  }
+  const truth = q.mode === "eins" ? (q.answer === "gta" ? "Das war GTA VI." : "Das war ein echtes Foto.") : `Bild ${q.answer + 1} war GTA.`;
+  const verdict = !mine || mine.pick === null ? `<div class="verdict none">Keine Antwort<small>${truth}</small></div>`
+    : mine.right ? `<div class="verdict yes">Richtig! +${mine.gain}<small>${truth}${solo && solo.streak > 1 ? ` · ${solo.streak} in Folge` : ""}</small></div>` : `<div class="verdict no">Daneben<small>${truth}</small></div>`;
+  const board = solo ? "" : `<div class="board">${[...d.players].filter((p) => r.picks[p.id]).sort((a, b) => b.score - a.score).map((p) => { const x = r.picks[p.id];
+    return `<div><span style="color:${esc(p.color)}">${esc(p.name)}</span><span class="g ${x.right ? "r" : "w"}">${x.right ? "+" + x.gain : x.pick === null ? "–" : "✗"}</span><span>${p.score}</span></div>`; }).join("")}</div>`;
+  const nextBtn = solo || d.vip ? `<button id="next" class="pink">${d.round >= d.rounds ? "Zum Ergebnis" : "Nächstes Bild"}</button>` : `<p class="muted" style="text-align:center">Gleich geht's weiter …</p>`;
+  app.innerHTML = head(solo ? "" : "Auflösung") + `<div class="play">${pic}<div class="stack">${verdict}${board}${nextBtn}<div class="credit">${q.pics.map(credit).join("<br>")}</div></div></div>`;
+  app.querySelectorAll("[data-zoom]").forEach((b) => b.onclick = () => zoom(q.pics[+b.dataset.zoom].src));
+  $("#next") && ($("#next").onclick = () => act({ a: "next" }));
+}
+
+function end() {
+  const d = st;
+  if (solo) {
+    const right = solo.log.filter((a) => a.right).length, rec = +store.get("eg_best_" + solo.mode) || 0, me0 = d.players[0];
+    if (me0.score > rec) store.set("eg_best_" + solo.mode, me0.score);
+    app.innerHTML = `<div class="lgrid"><div class="card stack" style="text-align:center"><span class="label">${MODES[solo.mode][0]} · Ergebnis</span><div class="big">${right} / ${solo.log.length}</div>
+      <h2>${me0.score} Punkte${me0.score > rec ? " – neuer Rekord!" : rec ? ` · Rekord ${rec}` : ""}</h2>
+      <p class="muted">${right === solo.log.length ? "Perfekt. Du kennst Florida besser als Rockstar." : right >= solo.log.length * .7 ? "Stark – dich legt man nicht so leicht rein." : right >= solo.log.length * .4 ? "Gar nicht so einfach, oder?" : "GTA VI hat dich voll erwischt."}</p></div>
+      <div class="stack"><button id="again" class="pink">Nochmal</button><button id="home" class="ghost">Mit Freunden spielen</button>${PARTY ? furidaAd() : ""}</div></div>`;
+    $("#again").onclick = () => startSolo(solo.mode);
+    $("#home").onclick = () => startScreen();
+    return;
+  }
+  const ranked = [...d.players].sort((a, b) => b.score - a.score);
+  app.innerHTML = `<div class="lgrid"><div class="stack"><h1>Endstand</h1><div class="rank">${ranked.map((p, i) => `<div><span>${i === 0 ? "🏆" : i + 1 + "."}</span><span style="color:${esc(p.color)}">${esc(p.name)}</span><span>${p.score}</span></div>`).join("")}</div></div>
+    <div class="stack" style="align-content:start">${d.vip ? `<button id="again" class="pink">Nochmal spielen</button>` : `<p class="muted">${esc(d.players.find((p) => p.vip)?.name || "Der Boss")} kann eine neue Runde starten.</p>`}${PARTY ? furidaAd() : ""}</div></div>`;
+  if (d.vip) $("#again").onclick = () => act({ a: "restart" });
+}
+
+// ---------------------------------------------------------------- solo: the same rules, played on this page
+const T = { eins: 15, mehrere: 20 };
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+async function startSolo(mode) {
+  if (ws) { me = null; ws.onclose = null; ws.close(); ws = null; }
+  app.innerHTML = `<div class="card wait"><h2>Bilder werden geladen …</h2></div>`;
+  let p;
+  try { p = await getPics(); } catch { return startScreen("Die Bilder ließen sich gerade nicht laden. Versuch es gleich nochmal."); }
+  const gta = shuffle([...p.gta]), real = shuffle([...p.real]), rounds = 10;
+  const qs = Array.from({ length: rounds }, () => {
+    if (mode === "eins") { const g = Math.random() < .5; const x = (g ? gta : real).pop(); return { mode, pics: [{ ...x, kind: g ? "gta" : "real" }], answer: g ? "gta" : "real" }; }
+    const pics = shuffle([{ ...gta.pop(), kind: "gta" }, ...[0, 1, 2].map(() => ({ ...real.pop(), kind: "real" }))]);
+    return { mode, pics, answer: pics.findIndex((x) => x.kind === "gta") };
+  });
+  qs.flatMap((q) => q.pics).forEach((x) => { const i = new Image(); i.src = x.src; }); // load ahead
+  solo = { mode, qs, i: -1, log: [], score: 0, streak: 0, t0: 0, rounds };
+  document.body.classList.remove("home");
+  history.replaceState(null, "", location.pathname);
+  soloNext();
+}
+const soloView = (phase, extra) => ({ phase, round: solo.i + 1, rounds: solo.rounds, mode: solo.mode, you: "me", vip: true, total: T[solo.mode],
+  left: phase === "ask" ? T[solo.mode] * 1000 : 0, playing: true, mine: null, result: null,
+  players: [{ id: "me", name: "Du", score: solo.score, online: true }], ...extra });
+const hide = (q) => ({ mode: q.mode, pics: q.pics.map((x) => ({ src: x.src })) });
+function soloNext() {
+  solo.i++;
+  if (solo.i >= solo.qs.length) {
+    fetch("/api/solo", { method: "POST", body: JSON.stringify({ mode: solo.mode, dev: devId(), answers: solo.log }) }).catch(() => {});
+    return show(soloView("end", { round: solo.rounds }));
+  }
+  solo.t0 = Date.now();
+  clearTimeout(solo.timer);
+  solo.timer = setTimeout(() => soloAnswer(null), T[solo.mode] * 1000);
+  show(soloView("ask", { q: hide(solo.qs[solo.i]) }));
+}
+function soloAnswer(pick) {
+  clearTimeout(solo.timer);
+  const q = solo.qs[solo.i], right = pick === q.answer;
+  const gain = right ? 100 + Math.round(50 * Math.max(0, 1 - (Date.now() - solo.t0) / (T[solo.mode] * 1000))) : 0;
+  solo.score += gain; solo.streak = right ? solo.streak + 1 : 0;
+  solo.log.push({ src: q.pics[q.mode === "eins" ? 0 : q.answer].src, right });
+  show(soloView("reveal", { q, mine: pick, result: { picks: { me: { pick, right, gain } } } }));
+}
+function soloAct(d) {
+  if (d.a === "answer" && st.phase === "ask") soloAnswer(d.pick);
+  else if (d.a === "next" && st.phase === "reveal") soloNext();
+}
+
+// timer bar: question time, or the short pause after the answer in rooms
+setInterval(() => {
+  if (!st) return;
+  const left = Math.max(0, ends - Date.now()), s = $("#secs"), bar = $("#tbar");
+  const total = (st.phase === "ask" ? st.total : 9) * 1000;
+  if (s) s.textContent = st.phase === "ask" || (st.phase === "reveal" && !solo) ? Math.ceil(left / 1000) + " s" : "";
+  if (bar) { bar.firstChild.style.transform = `scaleX(${st.phase === "reveal" && solo ? 0 : Math.min(1, left / total)})`; bar.classList.toggle("low", st.phase === "ask" && left < 5000); }
+}, 200);
+
+startScreen();
+const q0 = new URLSearchParams(location.search).get("code");
+if (q0 && store.get("eg_pid_" + q0.toUpperCase())) connect(q0.toUpperCase(), store.get("eg_name") || "");
+
+// ---------------------------------------------------------------- FURIDA party
+function usePartyCode() {
+  if (!partyCode || me || joining) return;
+  connect(null, null, false, partyCode);
+  partyCode = null;
+}
+if (PARTY) {
+  const f = document.createElement("iframe");
+  f.src = PARTY + "/overlay";
+  f.title = "Party";
+  f.className = "party"; // hidden until the FURIDA button (or a vote) opens it full screen
+  document.body.append(f);
+  addEventListener("message", (e) => {
+    if (e.origin !== PARTY || e.source !== f.contentWindow || !e.data) return;
+    const m = e.data;
+    if (m.party === "open") f.classList.toggle("open", !!m.on);
+    else if (m.party === "go" && /^https?:\/\//.test(m.url)) location.href = m.url;
+    else if (m.party === "code") { partyCode = String(m.code); usePartyCode(); }
+    else if (m.party === "member") {
+      $("#quit").hidden = !m.on;
+      document.body.classList.toggle("inparty", !!m.on);
+      $("#partyBtn").classList.toggle("away", !!m.away);
+    }
+  });
+  const askQuit = (e) => { if ($("#quit").hidden) return; e.preventDefault(); $("#quitbox").hidden = false; };
+  document.querySelector(".logo").addEventListener("click", askQuit);
+  $("#quit").onclick = askQuit;
+  // FURIDA button and ad: in a party they open the party page on top; otherwise the hub (in a new tab, so a running game stays open)
+  const toHub = (e) => { e.preventDefault(); if (document.body.classList.contains("inparty")) return f.contentWindow.postMessage({ party: "open" }, PARTY); window.open(PARTY + "/", me ? "_blank" : "_top"); };
+  $("#partyBtn").hidden = false;
+  $("#partyBtn").onclick = toHub;
+  document.addEventListener("click", (e) => { if (e.target.closest("#furidaAd")) toHub(e); });
+  $("#quitNo").onclick = () => { $("#quitbox").hidden = true; };
+  $("#quitYes").onclick = () => { $("#quitYes").disabled = true; f.contentWindow.postMessage({ party: "leave" }, PARTY); };
+  $("#quitbox").addEventListener("click", (e) => { if (e.target.id === "quitbox") $("#quitbox").hidden = true; });
+}
+</script>
+</body>
+</html>

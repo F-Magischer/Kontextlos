@@ -1,6 +1,6 @@
 // Play data of the FURIDA website, plus /data: one overview of the website and all games, behind DATA_PASSWORD
 // (HTTP Basic auth; any user name). Every service writes its own table in the same Postgres (Neon) database:
-// events (KONTEXTLOS), jasager_events, gruenderfieber_events, party_events (this site). Without DATABASE_URL nothing is stored.
+// events (KONTEXTLOS), jasager_events, gruenderfieber_events, echtodergta_events, party_events (this site). Without DATABASE_URL nothing is stored.
 const crypto = require("crypto");
 
 const TABLE = "party_events";
@@ -9,6 +9,7 @@ const SOURCES = [ // table, name, game id (null: the website)
   ["events", "KONTEXTLOS", "kontextlos"],
   ["jasager_events", "JA-SAGER", "jasager"],
   ["gruenderfieber_events", "GRÜNDERFIEBER", "gruenderfieber"],
+  ["echtodergta_events", "ECHT ODER GTA?", "echtodergta"],
 ];
 const db = process.env.DATABASE_URL ? new (require("pg").Pool)({ connectionString: process.env.DATABASE_URL, max: 3, ssl: { rejectUnauthorized: false } }) : null;
 // all four tables, so the overview works before a game has written anything
@@ -62,7 +63,7 @@ async function page(req, res, live, games) {
     const perDay = `select d, ${SOURCES.map((_, i) => `max(p${i}) p${i}, max(g${i}) g${i}`).join(", ")} from (${SOURCES.map(([t], i) =>
       `select ${DAY} d, ${SOURCES.map((_, j) => (j === i ? `count(distinct dev) filter (where ${people(t)}) p${j}, count(*) filter (where type = 'game_start') g${j}` : `null::bigint p${j}, null::bigint g${j}`)).join(", ")}
         from ${t} where ts > now() - interval '30 days' group by 1`).join(" union all ")}) x group by d order by d desc`;
-    const [s, d, party, plays, js, gfModes, gfTop] = await Promise.all([
+    const [s, d, party, plays, js, gfModes, gfTop, egPics, egSolo] = await Promise.all([
       db.query(sum),
       db.query(perDay),
       db.query(`select ${DAY} d, count(*) filter (where type = 'party_create') created, count(*) filter (where type = 'party_join') joined,
@@ -76,6 +77,12 @@ async function page(req, res, live, games) {
       db.query(`select data->>'mode' m, count(*) n, avg((data->>'players')::numeric) players, avg((data->>'rounds')::numeric) rounds
         from gruenderfieber_events where type = 'game_start' group by 1 order by 2 desc`),
       db.query(`select ts, data from gruenderfieber_events where type = 'idea' order by (data->>'raised')::int desc, ts desc limit 40`),
+      // ECHT ODER GTA?: every answer to a picture, from rooms (mode "eins") and solo games
+      db.query(`with a as (
+          select data->'pics'->0->>'src' src, data->'pics'->0->>'kind' kind, (data->>'right')::int r, (data->>'answered')::int n from echtodergta_events where type = 'question' and data->>'mode' = 'eins'
+          union all select x->>'src', x->>'kind', (x->>'right')::bool::int, 1 from echtodergta_events, jsonb_array_elements(data->'answers') x where type = 'solo')
+        select src, kind, sum(n) n, sum(r)::numeric / nullif(sum(n), 0) ok from a where n > 0 group by 1, 2 having sum(n) >= 3 order by 4 asc, 3 desc limit 25`),
+      db.query(`select data->>'mode' m, count(*) n, avg((data->>'right')::numeric / nullif((data->>'total')::numeric, 0)) ok from echtodergta_events where type = 'solo' group by 1 order by 2 desc`),
     ]);
     const name = Object.fromEntries(games.map((g) => [g.id, g.name]));
     body += `<h2>Überblick (30 Tage)</h2>${table(["", "Geräte 24 h", "7 Tage", "30 Tage", "davon über Party", "Spiele", "zu Ende", "gerade online", "Peak"],
@@ -87,6 +94,8 @@ async function page(req, res, live, games) {
       <h2>Welche Spiele Parties spielen</h2>${table(["Spiel", "gestartet", "davon per Abstimmung", "Ø Leute"], plays.rows.map((r) => [name[r.g] || r.g, r.n, pct(r.byvote, r.n), num(r.members)]))}
       <h2>KONTEXTLOS</h2><p class="note">Vorlagen, Fragen und alle Posts: <a href="${esc(games.find((g) => g.id === "kontextlos")?.url || "")}/data">KONTEXTLOS-Daten</a> (dasselbe Passwort, falls dort gesetzt).</p>
       <h2>JA-SAGER: Fragen</h2>${table(["Frage", "gestellt", "Ø Ja", "Ø daneben", "genau getroffen"], js.rows.map((r) => [r.q, r.n, pct(r.yes, 1), num(r.err), pct(r.exact, 1)]))}
+      <h2>ECHT ODER GTA?: Solo-Spiele</h2>${table(["Modus", "Spiele", "Ø richtig"], egSolo.rows.map((r) => [r.m === "mehrere" ? "Vier Bilder" : "Ein Bild", r.n, pct(r.ok, 1)]))}
+      <h2>ECHT ODER GTA?: Bilder, die am meisten täuschen</h2>${table(["Bild", "ist", "beantwortet", "richtig"], egPics.rows.map((r) => [decodeURIComponent(String(r.src).split("/").pop().split("?")[0]).replace(/^1280px-/, ""), r.kind === "gta" ? "GTA" : "echt", r.n, pct(r.ok, 1)]))}
       <h2>GRÜNDERFIEBER: Modi</h2>${table(["Modus", "Spiele", "Ø Leute", "Ø Runden"], gfModes.rows.map((r) => [r.m, r.n, num(r.players), num(r.rounds)]))}
       <h2>GRÜNDERFIEBER: Erfindungen mit dem meisten Kapital</h2>${table(["Zeit", "Produkt", "Slogan", "Aufgabe", "Modus", "Kapital"],
         gfTop.rows.map((r) => [time(r.ts), r.data.product, r.data.slogan, [r.data.brief?.what, r.data.brief?.who, r.data.brief?.problem].filter(Boolean).join(" · "), r.data.mode, ((r.data.raised || 0) * 1000).toLocaleString("de-DE") + " €"]))}`;

@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FURIDA</title>
 <script>
+// the bare Render address (it only answers once the server is up): go on to the public one, where party and cookie live
+if (location.hostname.endsWith(".onrender.com")) location.replace("https://play.furida.workers.dev" + location.pathname + location.search + location.hash);
 // theme before first paint: saved choice, else night for dark-mode devices, else day
 (() => { let t; try { t = localStorage.getItem("fu_theme"); } catch {}
   if (!["tag", "abend", "nacht"].includes(t)) t = matchMedia("(prefers-color-scheme: dark)").matches ? "nacht" : "tag";
@@ -108,6 +110,9 @@ label { display: block; margin: 0 0 6px 2px; }
 .gcard .art .live { position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: var(--a3); color: #10121F; }
 .gcard .body { padding: 14px 16px 16px; display: grid; gap: 8px; flex: 1; align-content: start; }
 .gcard .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; }
+.srv { font-size: 12px; font-weight: 700; color: var(--muted); text-decoration: none; border-bottom: 1px dashed currentColor; justify-self: start; }
+.srv:hover { color: var(--text); }
+.wake a { color: inherit; font-weight: 800; }
 .gcard.soon { border-style: dashed; justify-content: center; align-items: center; min-height: 250px; text-align: center; padding: 24px; background: transparent; }
 .gcard.soon .orb { width: 70px; height: 70px; border-radius: 22px; background: conic-gradient(from 0deg, var(--a1), var(--a2), var(--a3), var(--a1)); animation: spin 8s linear infinite; margin-bottom: 14px; opacity: .85; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -283,6 +288,7 @@ function library(pa, lead) {
   const cards = st.games.map((g) => `
     <article class="gcard"><div class="art"><img src="${esc(g.art)}" alt="" loading="lazy">${pa?.game === g.id ? `<span class="live">Läuft gerade</span>` : ""}</div>
       <div class="body"><h3>${esc(g.name)}</h3><p class="muted">${esc(g.tag)}</p>
+        ${/^https:/.test(g.server || "") ? `<a class="srv" href="${esc(g.server)}" target="_blank" rel="noopener" title="Öffnet den Server von ${esc(g.name)} in einem neuen Tab und startet ihn, falls er schläft">Server öffnen ↗</a>` : ""}
         <div class="row"><span class="muted">${esc(g.players)} · ${esc(g.time)}${g.down ? " · gerade nicht erreichbar" : ""}</span>
         ${pa && lead && !pa.vote && !pa.busy ? `<button class="small" data-pick="${esc(g.id)}" ${pa.members.length > g.max ? "disabled" : ""}>Spielen</button>` : ""}</div></div></article>`).join("");
   return `<section class="stack"><div class="libhead"><h2>Bibliothek</h2><span class="muted">${st.games.length} ${st.games.length === 1 ? "Spiel" : "Spiele"}</span></div>
@@ -341,7 +347,8 @@ function render() {
     const busy = pa.busy && gameOf(pa.busy);
     if (note) main += `<div class="note ${noteOk ? "ok" : ""}">${esc(note)}</div>`;
     if (busy) main += pa.wake == null ? `<div class="note ok">Wechsel zu ${esc(busy.name)} …</div>`
-      : `<div class="note ok wake"><span>${esc(busy.name)} wird hochgefahren …</span><div class="track"><i id="wakebar"></i></div><span class="muted" id="wakeleft"></span></div>`;
+      : `<div class="note ok wake"><span>${esc(busy.name)} wird hochgefahren …</span><div class="track"><i id="wakebar"></i></div><span class="muted" id="wakeleft"></span>
+        <span class="muted" id="wakeslow" hidden>Dauert länger als sonst. ${/^https:/.test(busy.server || "") ? `<a href="${esc(busy.server)}" target="_blank" rel="noopener">Server in neuem Tab öffnen ↗</a> – sobald er dort lädt, geht es hier weiter.` : ""}</span></div>`;
     if (pa.last && !pa.vote && !busy) main += `<div class="note ok">Ergebnis: <b>${esc(optName(pa.last.winner || "stay"))}</b>. ${esc(HOW[pa.last.how] || "")}</div>`;
     if (pa.vote) main += votePanel(pa);
   }
@@ -395,8 +402,17 @@ setInterval(() => {
   const bar = $("#wakebar"); if (!bar) return;
   const t = (Date.now() - wakeAt) / 1000, ETA = 50;
   bar.style.width = (t < ETA ? t / ETA * 85 : 85 + 13 * (1 - Math.exp(-(t - ETA) / 40))).toFixed(1) + "%";
-  $("#wakeleft").textContent = t < ETA - 3 ? `noch ca. ${Math.ceil(ETA - t)} s` : "gleich geschafft …";
+  $("#wakeleft").textContent = t < ETA - 3 ? `noch ca. ${Math.ceil(ETA - t)} s` : t < ETA + 25 ? "gleich geschafft …" : `schon ${Math.round(t)} s …`;
+  $("#wakeslow").hidden = t < ETA + 25;
 }, 250);
+// while a game server starts, ping it directly from here every few seconds: a request to the bare Render address wakes it
+let lastPing = 0;
+setInterval(() => {
+  const g = st?.party?.wake != null && gameOf(st.party.busy);
+  if (!g || !/^https:/.test(g.server || "") || Date.now() - lastPing < 8000) return;
+  lastPing = Date.now();
+  fetch(g.server + "/health", { mode: "no-cors", cache: "no-store" }).catch(() => {});
+}, 1000);
 setInterval(() => { const el = $("#left"); if (el) el.textContent = Math.max(0, Math.ceil((voteEnds - Date.now()) / 1000)) + " s"; }, 250);
 render();
 start();
